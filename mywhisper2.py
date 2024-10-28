@@ -5,6 +5,9 @@ from torch.optim import AdamW
 from torch.utils.data import Dataset, DataLoader
 from tqdm import tqdm
 import time
+import psutil
+import gc
+
 class AudioFeatureDataset(Dataset):
     def __init__(self, num_samples, max_audio_length=480000):
         self.num_samples = num_samples
@@ -56,11 +59,11 @@ def collate_fn(batch):
     }
 
 class WhisperEncoderTrainer:
-    def __init__(self, learning_rate=1e-5):
+    def __init__(self, learning_rate=1e-5, log_level=0):
         print("Initializing Whisper encoder trainer...")
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
         print(f"Using device: {self.device}")
-        
+        self.log_level = log_level
         print("Loading Whisper model...")
         device = "cuda" if torch.cuda.is_available() else "cpu"
         self.model = whisper.load_model("large-v3").to(device)
@@ -80,48 +83,90 @@ class WhisperEncoderTrainer:
         """
         return torch.nn.functional.mse_loss(encoder_output, target_embeddings)
     
+    def get_system_metrics(self):
+        
+        metrics = {
+            'cpu_percent': psutil.cpu_percent(),
+            'ram_percent': psutil.virtual_memory().percent,
+            'ram_used_gb': psutil.virtual_memory().used / (1024 ** 3),
+        }
+        
+        if torch.cuda.is_available():
+            # Get GPU memory information for all available GPUs
+            for i in range(torch.cuda.device_count()):
+                metrics.update({
+                    f'gpu_{i}_memory_allocated_gb': torch.cuda.memory_allocated(i) / (1024 ** 3),
+                    f'gpu_{i}_memory_reserved_gb': torch.cuda.memory_reserved(i) / (1024 ** 3),
+                    f'gpu_{i}_max_memory_allocated_gb': torch.cuda.max_memory_allocated(i) / (1024 ** 3),
+                    f'gpu_{i}_utilization': torch.cuda.utilization(i),
+                })
+        
+        return metrics
+    
+    def log_system_metrics(self, step_name, step_duration):
+        if self.log_level > 0:
+            print(f"\n=== System Metrics for {step_name} (took {step_duration:.4f}s) ===")
+        if self.log_level > 1:
+            metrics = self.get_system_metrics()
+            print(f"CPU Usage: {metrics['cpu_percent']}%")
+            print(f"RAM Usage: {metrics['ram_percent']}% ({metrics['ram_used_gb']:.2f} GB)")
+            
+            if torch.cuda.is_available():
+                for i in range(torch.cuda.device_count()):
+                    print(f"\nGPU {i} Metrics:")
+                    print(f"- Memory Allocated: {metrics[f'gpu_{i}_memory_allocated_gb']:.2f} GB")
+                    print(f"- Memory Reserved: {metrics[f'gpu_{i}_memory_reserved_gb']:.2f} GB")
+                    print(f"- Max Memory Allocated: {metrics[f'gpu_{i}_max_memory_allocated_gb']:.2f} GB")
+                    print(f"- GPU Utilization: {metrics[f'gpu_{i}_utilization']}%")
+    
     def train_epoch(self, dataloader, epoch):
         self.encoder.train()
         total_loss = 0
         progress_bar = tqdm(dataloader, desc=f'Epoch {epoch}')
         
         for batch_idx, batch in enumerate(progress_bar):
-            try:
-                mel_features = batch["mel_features"].to(self.device)
-                target_embeddings = batch["target_embeddings"].to(self.device)
-                last_time = time.time()
-                encoder_output = self.encoder(mel_features)
-                print("Encoder output shape:", encoder_output.shape)
-                current_time = time.time()
-                step_duration = current_time - last_time
-                last_time = current_time
-                print(f"Step took {step_duration:.4f} seconds")
-                
-                
-                loss = self.compute_loss(encoder_output, target_embeddings)
-                print(loss)  
-                current_time = time.time()
-                step_duration = current_time - last_time
-                last_time = current_time
-                print(f"Step took {step_duration:.4f} seconds")
+            mel_features = batch["mel_features"].to(self.device)
+            target_embeddings = batch["target_embeddings"].to(self.device)
+            
+            # Forward pass timing and metrics
+            last_time = time.time()
+            encoder_output = self.encoder(mel_features)
+            current_time = time.time()
+            step_duration = current_time - last_time
+            print("\nEncoder output shape:", encoder_output.shape)
+            self.log_system_metrics("Forward Pass", step_duration)
+            
+            # Loss computation timing and metrics
+            last_time = time.time()
+            loss = self.compute_loss(encoder_output, target_embeddings)
+            current_time = time.time()
+            step_duration = current_time - last_time
+            print(f"\nLoss: {loss.item()}")
+            self.log_system_metrics("Loss Computation", step_duration)
 
-                self.optimizer.zero_grad()
-                loss.backward()
-                print("Backward pass complete")
-                current_time = time.time()
-                step_duration = current_time - last_time
-                last_time = current_time
-                print(f"Step took {step_duration:.4f} seconds")
+            # Backward pass timing and metrics
+            last_time = time.time()
+            self.optimizer.zero_grad()
+            loss.backward()
+            current_time = time.time()
+            step_duration = current_time - last_time
+            self.log_system_metrics("Backward Pass", step_duration)
 
-                torch.nn.utils.clip_grad_norm_(self.encoder.parameters(), max_norm=1.0)
-                
-                self.optimizer.step()
-                total_loss += loss.item()
-                progress_bar.set_postfix({'loss': total_loss / (batch_idx + 1)})
-                
-            except Exception as e:
-                print(f"Error in batch {batch_idx}: {str(e)}")
-                continue
+            # Gradient clipping and optimizer step timing and metrics
+            last_time = time.time()
+            torch.nn.utils.clip_grad_norm_(self.encoder.parameters(), max_norm=1.0)
+            self.optimizer.step()
+            current_time = time.time()
+            step_duration = current_time - last_time
+            self.log_system_metrics("Optimizer Step", step_duration)
+            
+            # Clear some memory
+            if torch.cuda.is_available():
+                torch.cuda.empty_cache()
+            gc.collect()
+            
+            total_loss += loss.item()
+            progress_bar.set_postfix({'loss': total_loss / (batch_idx + 1)})
         
         return total_loss / len(dataloader)
     
@@ -136,16 +181,12 @@ class WhisperEncoderTrainer:
         
         print(f"Starting training for {num_epochs} epochs...")
         for epoch in range(num_epochs):
-            try:
-                avg_loss = self.train_epoch(dataloader, epoch)
-                print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
-                
-                if (epoch + 1) % 5 == 0:
-                    self.save_checkpoint(f"whisper_encoder_checkpoint_epoch_{epoch + 1}.pt")
-                    
-            except Exception as e:
-                print(f"Error during epoch {epoch}: {str(e)}")
-                continue
+            avg_loss = self.train_epoch(dataloader, epoch)
+            print(f"Epoch {epoch + 1}/{num_epochs}, Average Loss: {avg_loss:.4f}")
+            
+            if (epoch + 1) % 5 == 0:
+                self.save_checkpoint(f"whisper_encoder_checkpoint_epoch_{epoch + 1}.pt")
+
     
     def save_checkpoint(self, filename):
         checkpoint = {
@@ -159,7 +200,6 @@ class WhisperEncoderTrainer:
         self.encoder.load_state_dict(checkpoint['encoder_state_dict'])
         self.optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
 
-# Usage example
 if __name__ == "__main__":
-    trainer = WhisperEncoderTrainer()
+    trainer = WhisperEncoderTrainer(log_level = 2)
     trainer.train(num_epochs=10, batch_size=4, num_samples=500)
