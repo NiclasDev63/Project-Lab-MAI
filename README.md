@@ -17,7 +17,7 @@ First Download the adaface github:
 ```
 git clone git@github.com:mk-minchul/AdaFace.git
 ```
-of if you prefer https:
+Or if you prefer https:
 ```
 git clone https://github.com/mk-minchul/AdaFace.git
 ```
