@@ -4,10 +4,10 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import lr_scheduler
 
-# Assuming inference.py contains the model loading function
 from inference import load_pretrained_model
+import time
+from tqdm import tqdm
 
-# Set device
 device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
 
 class RandomDataset(data.Dataset):
@@ -19,25 +19,17 @@ class RandomDataset(data.Dataset):
         return self.num_samples
 
     def __getitem__(self, index):
-        # Generate random image data with proper dimensions
         input_data = torch.randn(*self.input_size)
         return input_data
 
 def feature_loss(features):
     """
-    Compute loss based on visual features
-    Implements a simple feature diversity loss that encourages
-    features to be different from each other within the batch
+    Placeholder LOSS
     """
-    # Normalize features
     features = F.normalize(features, p=2, dim=1)
     
-    # Compute similarity matrix
     similarity_matrix = torch.matmul(features, features.t())
     
-    # We want features to be different from each other
-    # So we minimize the absolute similarity between different features
-    # Exclude the diagonal (self-similarity) from the loss
     mask = torch.eye(features.size(0), device=features.device)
     loss = (torch.abs(similarity_matrix) * (1 - mask)).mean()
     
@@ -49,13 +41,12 @@ def train_adaface():
     model = model.to(device)
     model.train()
 
-    # Create dataset and dataloader
     train_dataset = RandomDataset(
         num_samples=1000, 
-        input_size=(3, 112, 112)  # AdaFace typically expects 112x112 images
+        input_size=(3, 112, 112)  # 112x112 should be correct from what i could find out
     )
     
-    # Training parameters
+    # Training parameters just setting them here for testing
     batch_size = 64
     learning_rate = 3e-6
     num_epochs = 25
@@ -68,66 +59,57 @@ def train_adaface():
         pin_memory=True
     )
 
-    # Optimizer and scheduler setup
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
 
-    # Debug first batch to understand model output
-    print("Debugging model output structure:")
-    with torch.no_grad():
-        sample_batch = next(iter(train_loader))
-        sample_batch = sample_batch.to(device)
-        outputs = model(sample_batch)
-        print("Model output type:", type(outputs))
-        if isinstance(outputs, tuple):
-            print("Number of elements in tuple:", len(outputs))
-            for i, out in enumerate(outputs):
-                if isinstance(out, torch.Tensor):
-                    print(f"Output {i} shape:", out.shape)
-                else:
-                    print(f"Output {i} type:", type(out))
 
     # Training loop
     for epoch in range(num_epochs):
+        model.train()
         total_loss = 0
-        for batch_idx, inputs in enumerate(train_loader):
-            inputs = inputs.to(device)
+        progress_bar = tqdm(train_loader, desc=f'Epoch {epoch+1}/{num_epochs}')
+        
+        for batch_idx, inputs in enumerate(progress_bar):
+            last_time = time.time()
             
+            inputs = inputs.to(device)
             optimizer.zero_grad()
-
+            
             # Forward pass
             outputs = model(inputs)
-            
+            current_time = time.time()
+            print(f"Forward pass took {current_time - last_time:.4f} seconds")
+            last_time = current_time
+
             # Assuming the first element of the tuple contains the features
-            # Modify this based on the debug output above
-            features = outputs[0]  # This line might need adjustment based on debug output
+            features = outputs[0]  # This line might need adjustment i am just trying to get the features not the label
             
-            # Calculate loss based on features
             loss = feature_loss(features)
-            
+            current_time = time.time()
+            print(f"Loss computation took {current_time - last_time:.4f} seconds")
+            last_time = current_time
+
             # Backpropagation
             loss.backward()
+            print("Backward pass complete")
+            current_time = time.time()
+            print(f"Backward pass took {current_time - last_time:.4f} seconds")
+            last_time = current_time
+
             optimizer.step()
-
+            current_time = time.time()
+            print(f"Optimizer step took {current_time - last_time:.4f} seconds")
+            last_time = current_time
+            
+            # Accumulate loss
             total_loss += loss.item()
-
-            if batch_idx % 10 == 0:
-                avg_loss = total_loss / (batch_idx + 1)
-                print(f"Epoch {epoch+1}/{num_epochs}, "
-                      f"Batch {batch_idx+1}/{len(train_loader)}, "
-                      f"Avg Loss: {avg_loss:.4f}")
-
+            avg_loss = total_loss / (batch_idx + 1)
+            progress_bar.set_postfix({'loss': avg_loss})
+        
         # Adjust learning rate
         scheduler.step()
-        
-        # Save checkpoint after each epoch
-        checkpoint = {
-            'epoch': epoch,
-            'model_state_dict': model.state_dict(),
-            'optimizer_state_dict': optimizer.state_dict(),
-            'loss': total_loss / len(train_loader),
-        }
-        torch.save(checkpoint, f'adaface_checkpoint_epoch_{epoch+1}.pth')
+
+
 
     # Save final model
     torch.save(model.state_dict(), "adaface_finetuned.pth")
