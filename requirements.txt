@@ -1,0 +1,15 @@
+pytorch-lightning==1.8.6
+torch
+torchvision
+torchaudio
+--extra-index-url https://download.pytorch.org/whl/cu118
+tqdm
+bcolz-zipline
+prettytable
+menpo
+mxnet
+opencv-python
+pillow==9.0.0
+openai-whisper
+psutil
+pynvml
