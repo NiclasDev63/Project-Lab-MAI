@@ -3,7 +3,7 @@ import torch
 
 def intra_modal_consistency_loss(identity_features, I, temperature=0.1):
     """
-    Calculate the intra-modal consistency loss using raw dot product with corrected einsum.
+    Calculate the intra-modal consistency loss using raw dot product
 
     Parameters:
         identity_features (torch.Tensor): Tensor of shape (N, T, d), where
