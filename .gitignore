@@ -1,0 +1,14 @@
+*.pyc
+.vscode
+*.ckpt
+.idea
+experiments
+playground
+validation_ijbs
+*.pkl
+*.csv
+result
+AdaFace/scripts/run_debug*
+AdaFace/pretrained/*
+__pycache__
+datasets/Training_VoxCeleb2

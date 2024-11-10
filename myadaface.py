@@ -4,7 +4,7 @@ import torch.nn as nn
 from torch.nn import functional as F
 from torch.optim import lr_scheduler
 
-from inference import load_pretrained_model
+from AdaFace.inference import load_pretrained_model
 import time
 from tqdm import tqdm
 

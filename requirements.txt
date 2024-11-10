@@ -13,3 +13,4 @@ pillow==9.0.0
 openai-whisper
 psutil
 pynvml
+opencv-python
