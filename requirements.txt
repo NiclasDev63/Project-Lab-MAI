@@ -15,3 +15,4 @@ psutil
 pynvml
 opencv-python
 einops
+av

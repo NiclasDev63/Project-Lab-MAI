@@ -10,6 +10,7 @@ import os
 from pathlib import Path
 from torchvision.transforms.functional import InterpolationMode
 from data_loader.vox_celeb2.video_transforms import SquareVideo, ResizeVideo, ToTensorVideo, NormalizeVideo
+import torchaudio
 
 class TemporalAlignmentModule(nn.Module):
     """
@@ -301,16 +302,24 @@ class VoxCeleb2Dataset(Dataset):
         else:
             indices = torch.linspace(0, len(pts)-1, self.frames_per_clip).long()
         
+        # Convert pts to tensor
+        pts_tensor = torch.tensor(pts)
+
+        #start_pts = min(pts)
+        #end_pts = max(pts)
+
         # Read video at selected timestamps
         frames, audio, info = read_video(
             str(video_path), 
-            pts[indices].tolist(),
+            #start_pts=start_pts,
+            #end_pts=end_pts,
             output_format="TCHW"  # Returns frames in format (time, channels, height, width)
         )
-        
+        frames = frames[indices]
+
         # Apply video transforms
         frames = self.video_transforms(frames)
-        frame_times = pts[indices] / info["video_fps"]
+        frame_times = pts_tensor[indices] / info["video_fps"]
         
         return frames, frame_times, audio, info
     
@@ -325,7 +334,7 @@ class VoxCeleb2Dataset(Dataset):
         
         # Process audio
         # Convert to mono if stereo
-        if audio.size(1) > 1:
+        if audio.size(0) > 1:
             audio = torch.mean(audio, dim=1, keepdim=True)
         
         # Resample to 16kHz if needed (Whisper's expected sample rate)
@@ -335,7 +344,7 @@ class VoxCeleb2Dataset(Dataset):
         
         # Trim to max_audio_length if necessary
         max_samples = int(self.max_audio_length * 16000)
-        if audio.size(0) > max_samples:
+        if audio.size(1) > max_samples:
             audio = audio[:max_samples]
         
         # Convert to mel spectrogram using Whisper's processor
@@ -343,8 +352,8 @@ class VoxCeleb2Dataset(Dataset):
         
         return {
             'frames': frames,  # shape: (frames_per_clip, 3, H, W)
-            'mel_spectrogram': torch.from_numpy(mel),  # shape: (n_mels, T)
-            'audio_length': audio.size(0),  # scalar
+            'mel_spectrogram': mel,  # shape: (1, n_mels, T)
+            'audio_length': audio.size(1),  # scalar
             'frame_times': frame_times,  # shape: (frames_per_clip,)
             'video_path': str(video_path)  # for debugging
         }
@@ -375,7 +384,39 @@ def create_voxceleb2_dataloader(
         shuffle=(split == 'train'),
         num_workers=num_workers,
         pin_memory=True,
-        drop_last=True
+        drop_last=True,
+        collate_fn=custom_collate_fn
     )
     
     return dataloader
+
+
+def custom_collate_fn(batch):
+    """
+    Custom collate function to pad mel spectrograms to a fixed length (480000).
+    """
+    FIXED_LENGTH = 480000
+
+    # Separate each item in the batch
+    frames = [item['frames'] for item in batch]
+    mel_spectrograms = [torch.tensor(item['mel_spectrogram']) for item in batch]
+    audio_lengths = [item['audio_length'] for item in batch]
+    frame_times = [item['frame_times'] for item in batch]
+    video_paths = [item['video_path'] for item in batch]
+
+    # Stack frames and frame_times as they are already the same size
+    frames = torch.stack(frames)
+    frame_times = torch.stack(frame_times)
+    audio_lengths = torch.tensor(audio_lengths)
+    
+    # Pad mel spectrograms to the fixed length (480000)
+    padded_mels = [torch.nn.functional.pad(mel, (0, FIXED_LENGTH - mel.shape[-1])) for mel in mel_spectrograms]
+    mel_spectrograms = torch.stack(padded_mels)
+
+    return {
+        'frames': frames,
+        'mel_spectrogram': mel_spectrograms,
+        'audio_length': audio_lengths,
+        'frame_times': frame_times,
+        'video_path': video_paths
+    }
