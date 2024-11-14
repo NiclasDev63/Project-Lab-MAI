@@ -3,6 +3,13 @@ import torch.nn as nn
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 import whisper
 from AdaFace.inference import load_pretrained_model
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as transforms
+from torchvision.io import read_video, read_video_timestamps
+import os
+from pathlib import Path
+from torchvision.transforms.functional import InterpolationMode
+from data_loader.vox_celeb2.video_transforms import SquareVideo, ResizeVideo, ToTensorVideo, NormalizeVideo
 
 class TemporalAlignmentModule(nn.Module):
     """
@@ -227,16 +234,6 @@ def train_multimodal_system(
         avg_loss = total_loss / len(train_loader)
         print(f'Epoch: {epoch}, Average Loss: {avg_loss:.4f}')
         
-        
-  import torch
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
-from torchvision.io import read_video, read_video_timestamps
-import os
-from pathlib import Path
-import whisper
-import torch.nn.functional as F
-from torchvision.transforms.functional import InterpolationMode
 
 class VoxCeleb2Dataset(Dataset):
     def __init__(
