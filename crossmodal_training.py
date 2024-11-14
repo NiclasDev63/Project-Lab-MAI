@@ -226,3 +226,159 @@ def train_multimodal_system(
         
         avg_loss = total_loss / len(train_loader)
         print(f'Epoch: {epoch}, Average Loss: {avg_loss:.4f}')
+        
+        
+  import torch
+from torch.utils.data import Dataset, DataLoader
+import torchvision.transforms as transforms
+from torchvision.io import read_video, read_video_timestamps
+import os
+from pathlib import Path
+import whisper
+import torch.nn.functional as F
+from torchvision.transforms.functional import InterpolationMode
+
+class VoxCeleb2Dataset(Dataset):
+    def __init__(
+        self,
+        root_dir,
+        split='train',
+        frames_per_clip=16,
+        frame_size=(112, 112),
+        max_audio_length=30  # maximum audio length in seconds
+    ):
+        """
+        Args:
+            root_dir: Path to VoxCeleb2 dataset root
+            split: 'train' or 'test'
+            frames_per_clip: Number of frames to sample from each video
+            frame_size: Size to resize frames to (height, width)
+            max_audio_length: Maximum audio length in seconds
+        """
+        super().__init__()
+        self.root_dir = Path(root_dir)
+        self.split = 'dev' if split == 'train' else 'test'
+        self.frames_per_clip = frames_per_clip
+        self.frame_size = frame_size
+        self.max_audio_length = max_audio_length
+        
+        # Load video paths
+        self.video_paths = []
+        split_dir = self.root_dir / self.split
+        
+        for person_id in os.listdir(split_dir):
+            person_dir = split_dir / person_id
+            if not person_dir.is_dir():
+                continue
+                
+            for video_id in os.listdir(person_dir):
+                video_dir = person_dir / video_id
+                if not video_dir.is_dir():
+                    continue
+                    
+                for video_file in video_dir.glob('*.mp4'):
+                    self.video_paths.append(video_file)
+        
+        # Video transforms from marcels file
+        self.video_transforms = transforms.Compose([
+            SquareVideo(),
+            ResizeVideo(frame_size, InterpolationMode.BILINEAR),
+            ToTensorVideo(max_pixel_value=255.0),
+            NormalizeVideo(
+                mean=[0.485, 0.456, 0.406],
+                std=[0.229, 0.224, 0.225]
+            )
+        ])
+        
+        # Initialize Whisper processor for mel spectrograms
+        self.whisper_processor = whisper.log_mel_spectrogram
+        
+    def _load_video_frames(self, video_path):
+        """Load and process video frames"""
+        # Get video timestamps first
+        pts, fps = read_video_timestamps(str(video_path))
+        
+        # Calculate frame indices to sample
+        if len(pts) <= self.frames_per_clip:
+            indices = torch.linspace(0, len(pts)-1, self.frames_per_clip).long()
+        else:
+            indices = torch.linspace(0, len(pts)-1, self.frames_per_clip).long()
+        
+        # Read video at selected timestamps
+        frames, audio, info = read_video(
+            str(video_path), 
+            pts[indices].tolist(),
+            output_format="TCHW"  # Returns frames in format (time, channels, height, width)
+        )
+        
+        # Apply video transforms
+        frames = self.video_transforms(frames)
+        frame_times = pts[indices] / info["video_fps"]
+        
+        return frames, frame_times, audio, info
+    
+    def __len__(self):
+        return len(self.video_paths)
+    
+    def __getitem__(self, idx):
+        video_path = self.video_paths[idx]
+        
+        # Load frames, audio, and metadata
+        frames, frame_times, audio, info = self._load_video_frames(video_path)
+        
+        # Process audio
+        # Convert to mono if stereo
+        if audio.size(1) > 1:
+            audio = torch.mean(audio, dim=1, keepdim=True)
+        
+        # Resample to 16kHz if needed (Whisper's expected sample rate)
+        if info["audio_fps"] != 16000:
+            resampler = torchaudio.transforms.Resample(info["audio_fps"], 16000)
+            audio = resampler(audio.t()).t()
+        
+        # Trim to max_audio_length if necessary
+        max_samples = int(self.max_audio_length * 16000)
+        if audio.size(0) > max_samples:
+            audio = audio[:max_samples]
+        
+        # Convert to mel spectrogram using Whisper's processor
+        mel = self.whisper_processor(audio.squeeze(1).numpy())
+        
+        return {
+            'frames': frames,  # shape: (frames_per_clip, 3, H, W)
+            'mel_spectrogram': torch.from_numpy(mel),  # shape: (n_mels, T)
+            'audio_length': audio.size(0),  # scalar
+            'frame_times': frame_times,  # shape: (frames_per_clip,)
+            'video_path': str(video_path)  # for debugging
+        }
+
+def create_voxceleb2_dataloader(
+    root_dir,
+    batch_size=8,
+    num_workers=4,
+    split='train',
+    frames_per_clip=16,
+    frame_size=(112, 112),
+    max_audio_length=30
+):
+    """
+    Create a DataLoader for the VoxCeleb2 dataset
+    """
+    dataset = VoxCeleb2Dataset(
+        root_dir=root_dir,
+        split=split,
+        frames_per_clip=frames_per_clip,
+        frame_size=frame_size,
+        max_audio_length=max_audio_length
+    )
+    
+    dataloader = DataLoader(
+        dataset,
+        batch_size=batch_size,
+        shuffle=(split == 'train'),
+        num_workers=num_workers,
+        pin_memory=True,
+        drop_last=True
+    )
+    
+    return dataloader
