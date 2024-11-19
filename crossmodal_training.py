@@ -59,8 +59,9 @@ class MultiModalFeatureExtractor(nn.Module):
         self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
         
         # Initialize AdaFace for visual features
-        self.adaface = load_pretrained_model("ir_50")
-        
+        adaface = load_pretrained_model("ir_50")
+        self.adaface = adaface.to(self.device)
+        self.adaface.train()
         # Initialize Whisper for audio features
         self.whisper = whisper.load_model("large-v3")
         self.audio_encoder = self.whisper.encoder
@@ -78,20 +79,25 @@ class MultiModalFeatureExtractor(nn.Module):
             num_layers=num_encoder_layers
         )
     
-    def process_frames(self, frames):
+    def process_frames(self, frames,original_lengths):
         """
         Process individual frames through AdaFace and transformer
         
         Args:
             frames: tensor of shape (batch_size, num_frames, 3, 112, 112)
         """
+        # How do we use batches with movies of differing lengths ????? 
         batch_size, num_frames = frames.shape[:2]
         frame_features = []
         
+        
         # Process each frame individually through AdaFace
         for i in range(num_frames):
+            self.adaface.train()
             frame = frames[:, i]  # (batch_size, 3, 112, 112)
+            frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
+            
             frame_features.append(features)
         
         # Stack frame features
@@ -158,7 +164,7 @@ class MultiModalFeatureExtractor(nn.Module):
         batch_size = frames.shape[0]
         
         # Process all frames through AdaFace and transformer
-        visual_features = self.process_frames(frames)
+        visual_features = self.process_frames(frames, original_lengths)
         
         # Process full audio through Whisper and get relevant features
         audio_features = self.process_audio(mel_features, original_lengths)
@@ -241,7 +247,7 @@ class VoxCeleb2Dataset(Dataset):
         self,
         root_dir,
         split='train',
-        frames_per_clip=16,
+        frames_per_clip=25,
         frame_size=(112, 112),
         max_audio_length=30  # maximum audio length in seconds
     ):
@@ -296,12 +302,6 @@ class VoxCeleb2Dataset(Dataset):
         # Get video timestamps first
         pts, fps = read_video_timestamps(str(video_path))
         
-        # Calculate frame indices to sample
-        if len(pts) <= self.frames_per_clip:
-            indices = torch.linspace(0, len(pts)-1, self.frames_per_clip).long()
-        else:
-            indices = torch.linspace(0, len(pts)-1, self.frames_per_clip).long()
-        
         # Convert pts to tensor
         pts_tensor = torch.tensor(pts)
 
@@ -315,11 +315,10 @@ class VoxCeleb2Dataset(Dataset):
             #end_pts=end_pts,
             output_format="TCHW"  # Returns frames in format (time, channels, height, width)
         )
-        frames = frames[indices]
 
         # Apply video transforms
         frames = self.video_transforms(frames)
-        frame_times = pts_tensor[indices] / info["video_fps"]
+        frame_times = pts_tensor
         
         return frames, frame_times, audio, info
     
@@ -348,7 +347,7 @@ class VoxCeleb2Dataset(Dataset):
             audio = audio[:max_samples]
         
         # Convert to mel spectrogram using Whisper's processor
-        mel = self.whisper_processor(audio.squeeze(1).numpy())
+        mel = self.whisper_processor(audio.squeeze(1).numpy(),n_mels=128).squeeze(0)
         
         return {
             'frames': frames,  # shape: (frames_per_clip, 3, H, W)
@@ -393,9 +392,11 @@ def create_voxceleb2_dataloader(
 
 def custom_collate_fn(batch):
     """
-    Custom collate function to pad mel spectrograms to a fixed length (480000).
+    Custom collate function to pad:
+    - mel spectrograms to a fixed length (3000)
+    - frames and frame_times with -1 for variable length sequences
     """
-    FIXED_LENGTH = 480000
+    FIXED_LENGTH = 3000
 
     # Separate each item in the batch
     frames = [item['frames'] for item in batch]
@@ -404,19 +405,47 @@ def custom_collate_fn(batch):
     frame_times = [item['frame_times'] for item in batch]
     video_paths = [item['video_path'] for item in batch]
 
-    # Stack frames and frame_times as they are already the same size
-    frames = torch.stack(frames)
-    frame_times = torch.stack(frame_times)
+    # Find maximum sequence length for frames
+    max_frames_length = max(f.size(0) for f in frames)
+    
+    # Pad frames with -1
+    padded_frames = []
+    for frame_seq in frames:
+        padding_length = max_frames_length - frame_seq.size(0)
+        if padding_length > 0:
+            # Create padding tensor with same spatial dimensions as frames
+            padding = torch.full(
+                (padding_length, frame_seq.size(1), frame_seq.size(2), frame_seq.size(3)),
+                -1.0,
+                dtype=frame_seq.dtype
+            )
+            padded_frames.append(torch.cat([frame_seq, padding], dim=0))
+        else:
+            padded_frames.append(frame_seq)
+    
+    # Pad frame_times with -1
+    padded_frame_times = []
+    for time_seq in frame_times:
+        padding_length = max_frames_length - time_seq.size(0)
+        if padding_length > 0:
+            padding = torch.full((padding_length,), -1.0, dtype=time_seq.dtype)
+            padded_frame_times.append(torch.cat([time_seq, padding], dim=0))
+        else:
+            padded_frame_times.append(time_seq)
+
+    # Stack all tensors
+    frames = torch.stack(padded_frames)
+    frame_times = torch.stack(padded_frame_times)
     audio_lengths = torch.tensor(audio_lengths)
     
-    # Pad mel spectrograms to the fixed length (480000)
+    # Pad mel spectrograms to the fixed length (3000)
     padded_mels = [torch.nn.functional.pad(mel, (0, FIXED_LENGTH - mel.shape[-1])) for mel in mel_spectrograms]
     mel_spectrograms = torch.stack(padded_mels)
 
     return {
-        'frames': frames,
+        'frames': frames,  # shape: (batch_size, max_seq_length, C, H, W)
         'mel_spectrogram': mel_spectrograms,
         'audio_length': audio_lengths,
-        'frame_times': frame_times,
+        'frame_times': frame_times,  # shape: (batch_size, max_seq_length)
         'video_path': video_paths
     }
