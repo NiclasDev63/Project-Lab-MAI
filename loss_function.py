@@ -1,7 +1,7 @@
 import torch
 
 
-def intra_modal_consistency_loss(identity_features, I, temperature=0.1):
+def intra_modal_consistency_loss(identity_features, temperature=0.1):
     """
     Calculate the intra-modal consistency loss using raw dot product
 
@@ -53,33 +53,5 @@ def intra_modal_consistency_loss(identity_features, I, temperature=0.1):
             q_frame_loss += identity_loss
         loss += q_frame_loss
     # Normalize the loss over all identities and time windows
-    loss /= I * T * T
-    return -loss
-
-# TODO: test if its correct
-def intra_modal_consistency_loss(identity_features, I, temperature=0.1):
-    """
-    Calculate the intra-modal consistency loss using raw dot product (vectorized version)
-    """
-    N, T, d = identity_features.shape
-
-    # Compute pairwise similarities across time windows and identities
-    similarities = (
-        torch.einsum("itd,jqd->tqij", identity_features, identity_features)
-        / temperature
-    )
-
-    # Take exponentials
-    exp_similarities = torch.exp(similarities)
-
-    # Compute numerator: similarities between same identity frames
-    numerator = torch.diagonal(exp_similarities, dim1=2, dim2=3)  # Shape: (T, T, N)
-
-    # Compute denominator: sum over all identities
-    denominator = exp_similarities.sum(dim=3)  # Shape: (T, T, N)
-
-    # Compute loss using vectorized operations
-    loss = torch.log(numerator / denominator)  # Shape: (T, T, N)
-    loss = loss.sum() / (I * T * T)
-
+    loss /= N * T * T
     return -loss
