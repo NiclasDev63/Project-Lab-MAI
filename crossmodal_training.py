@@ -73,10 +73,10 @@ class MultiModalFeatureExtractor(nn.Module):
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
         # Initialize AdaFace for visual features
-        self.adaface = load_pretrained_model("ir_50")
+        self.adaface = load_pretrained_model("ir_50").to(self.device)
 
         # Initialize Whisper for audio features
-        self.whisper = whisper.load_model("large-v3")
+        self.whisper = whisper.load_model("large-v3").to(self.device)
         self.audio_encoder = self.whisper.encoder
         del self.whisper.decoder
 
@@ -89,7 +89,7 @@ class MultiModalFeatureExtractor(nn.Module):
         )
         self.visual_transformer = TransformerEncoder(
             encoder_layers, num_layers=num_encoder_layers
-        )
+        ).to(self.device)
 
     def process_frames(self, frames):
         """
@@ -164,6 +164,49 @@ class MultiModalFeatureExtractor(nn.Module):
         )  # (num_frames, 1792)
         return combined_features
 
+    # TODO: test this
+    def align_and_combine_interpolate(
+        self, visual_features, audio_features, frame_timestamps, audio_timestamps
+    ):
+        """
+        Align and combine visual and audio features using interpolation.
+
+        Args:
+            visual_features: tensor of shape (num_frames, 512)
+            audio_features: tensor of shape (audio_time, 1280)
+            frame_timestamps: tensor of shape (num_frames,)
+            audio_timestamps: tensor of shape (audio_time,)
+        """
+        # Interpolate audio features for frame timestamps
+        interpolated_audio = []
+        for frame_time in frame_timestamps:
+            # Find indices for interpolation
+            lower_idx = torch.searchsorted(
+                audio_timestamps, frame_time, right=False
+            ).clamp(max=len(audio_timestamps) - 1)
+            upper_idx = lower_idx + 1
+            lower_idx = lower_idx.clamp(max=audio_timestamps.size(0) - 1)
+
+            if upper_idx >= audio_timestamps.size(0):
+                # If the frame_time is beyond the last audio timestamp, use the last audio feature
+                interpolated_audio.append(audio_features[-1])
+            else:
+                # Linear interpolation
+                t1, t2 = audio_timestamps[lower_idx], audio_timestamps[upper_idx]
+                f1, f2 = audio_features[lower_idx], audio_features[upper_idx]
+                weight = (frame_time - t1) / (t2 - t1 + 1e-8)  # Avoid division by zero
+                interpolated_audio.append((1 - weight) * f1 + weight * f2)
+
+        interpolated_audio = torch.stack(
+            interpolated_audio, dim=0
+        )  # (num_frames, 1280)
+
+        # Concatenate visual and interpolated audio features
+        combined_features = torch.cat(
+            [visual_features, interpolated_audio], dim=-1
+        )  # (num_frames, 1792)
+        return combined_features
+
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
         Forward pass processing full audio and individual frames
@@ -176,11 +219,18 @@ class MultiModalFeatureExtractor(nn.Module):
         """
         batch_size = frames.shape[0]
 
+        print("frames shape: ", frames.shape)
+        print("mel_features shape: ", mel_features.shape)
+        print("original_lengths shape: ", original_lengths.shape)
+        print("frame_timestamps shape: ", frame_timestamps.shape)
+
         # Process all frames through AdaFace and transformer
         visual_features = self.process_frames(frames)
+        print("visual_features shape: ", visual_features[0].shape)
 
         # Process full audio through Whisper and get relevant features
         audio_features = self.process_audio(mel_features, original_lengths)
+        print("audio_features shape: ", audio_features[0].shape)
 
         # Align and combine features for each sequence in the batch
         combined_features = []
@@ -297,9 +347,12 @@ class VoxCeleb2Dataset(Dataset):
         self.video_transforms = transforms.Compose(
             [
                 SquareVideo(),
+                # convert rgb to bgr as described in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
+                transforms.Lambda(lambda x: x[:, [2, 1, 0], :, :]),
                 ResizeVideo(frame_size, InterpolationMode.BILINEAR),
                 ToTensorVideo(max_pixel_value=255.0),
-                NormalizeVideo(mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]),
+                # use mean and std as describe in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
+                NormalizeVideo(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             ]
         )
 
@@ -331,8 +384,6 @@ class VoxCeleb2Dataset(Dataset):
             # end_pts=end_pts,
             output_format="TCHW",  # Returns frames in format (time, channels, height, width)
         )
-        # Convert to input format for AdaFace i.e. rgb to bgr
-        frames = frames[:, [2, 1, 0], :, :]
 
         frames = frames[indices]
 
@@ -361,13 +412,10 @@ class VoxCeleb2Dataset(Dataset):
             resampler = torchaudio.transforms.Resample(info["audio_fps"], 16000)
             audio = resampler(audio.t()).t()
 
-        # Trim to max_audio_length if necessary
-        max_samples = int(self.max_audio_length * 16000)
-        if audio.size(1) > max_samples:
-            audio = audio[:max_samples]
-
-        # Convert to mel spectrogram using Whisper's processor
-        mel = self.whisper_processor(audio.squeeze(1).numpy(), n_mels=self.n_mels)
+        # Convert to mel spectrogram and pad (or trim) using Whisper's processor
+        mel = self.whisper_processor(
+            audio.squeeze(1).numpy(), n_mels=self.n_mels
+        ).squeeze(0)
 
         return {
             "frames": frames,  # shape: (frames_per_clip, 3, H, W)
@@ -413,11 +461,14 @@ def create_voxceleb2_dataloader(
     return dataloader
 
 
+# TODO: make this more efficient
 def custom_collate_fn(batch):
     """
-    Custom collate function to pad mel spectrograms to a fixed length (480000).
+    Custom collate function to pad:
+    - mel spectrograms to a fixed length (3000)
+    - frames and frame_times with -1 for variable length sequences
     """
-    FIXED_LENGTH = 480000
+    FIXED_LENGTH = 3000
 
     # Separate each item in the batch
     frames = [item["frames"] for item in batch]
@@ -426,12 +477,45 @@ def custom_collate_fn(batch):
     frame_times = [item["frame_times"] for item in batch]
     video_paths = [item["video_path"] for item in batch]
 
-    # Stack frames and frame_times as they are already the same size
-    frames = torch.stack(frames)
-    frame_times = torch.stack(frame_times)
+    # Find maximum sequence length for frames
+    max_frames_length = max(f.size(0) for f in frames)
+
+    # Pad frames with -1
+    padded_frames = []
+    for frame_seq in frames:
+        padding_length = max_frames_length - frame_seq.size(0)
+        if padding_length > 0:
+            # Create padding tensor with same spatial dimensions as frames
+            padding = torch.full(
+                (
+                    padding_length,
+                    frame_seq.size(1),
+                    frame_seq.size(2),
+                    frame_seq.size(3),
+                ),
+                -1.0,
+                dtype=frame_seq.dtype,
+            )
+            padded_frames.append(torch.cat([frame_seq, padding], dim=0))
+        else:
+            padded_frames.append(frame_seq)
+
+    # Pad frame_times with -1
+    padded_frame_times = []
+    for time_seq in frame_times:
+        padding_length = max_frames_length - time_seq.size(0)
+        if padding_length > 0:
+            padding = torch.full((padding_length,), -1.0, dtype=time_seq.dtype)
+            padded_frame_times.append(torch.cat([time_seq, padding], dim=0))
+        else:
+            padded_frame_times.append(time_seq)
+
+    # Stack all tensors
+    frames = torch.stack(padded_frames)
+    frame_times = torch.stack(padded_frame_times)
     audio_lengths = torch.tensor(audio_lengths)
 
-    # Pad mel spectrograms to the fixed length (480000)
+    # Pad mel spectrograms to the fixed length (3000)
     padded_mels = [
         torch.nn.functional.pad(mel, (0, FIXED_LENGTH - mel.shape[-1]))
         for mel in mel_spectrograms
@@ -439,9 +523,9 @@ def custom_collate_fn(batch):
     mel_spectrograms = torch.stack(padded_mels)
 
     return {
-        "frames": frames,
+        "frames": frames,  # shape: (batch_size, max_seq_length, C, H, W)
         "mel_spectrogram": mel_spectrograms,
         "audio_length": audio_lengths,
-        "frame_times": frame_times,
+        "frame_times": frame_times,  # shape: (batch_size, max_seq_length)
         "video_path": video_paths,
     }
