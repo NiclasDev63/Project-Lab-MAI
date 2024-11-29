@@ -68,7 +68,10 @@ def train_adaface(model):
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
     scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
     total_loss = 0
+    num_batches = len(dataloader.dataset) // dataloader.batch_sampler.batch_size
+    progress_bar = tqdm(total=num_batches, desc="Processing")
 
+    batch_idx = 0
     for batch in dataloader:
 
         last_time = time.time()
@@ -116,10 +119,12 @@ def train_adaface(model):
 
         # Accumulate and display loss
         total_loss += loss.item()
-        avg_loss = total_loss / (batch + 1)
-        progress_bar.set_postfix({"loss": avg_loss})
-        progress_bar.update(1)  # Advance the progress bar
-
+        print(f"Accumulate loss: {total_loss}")
+        # Update progress bar manually
+        progress_bar.update(1)
+        # Update description dynamically
+        progress_bar.set_description(f"Batch {batch_idx + 1}/{num_batches}")
+        batch_idx += 1
         # Adjust learning rate
         scheduler.step()
 
