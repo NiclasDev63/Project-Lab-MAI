@@ -315,7 +315,8 @@ class VoxCeleb2Dataset(Dataset):
         frames_per_clip=25,
         frame_size=(112, 112),
         max_audio_length=30,  # maximum audio length in seconds
-        n_mels=80,
+        n_mels=128, # is 128 for v3
+        train_list_path = ""
     ):
         """
         Args:
@@ -333,6 +334,18 @@ class VoxCeleb2Dataset(Dataset):
         self.max_audio_length = max_audio_length
         self.n_mels = n_mels
         # Load video paths
+        
+        self.videos_by_identity = {}
+        with open(train_list_path, 'r') as f:
+            for line in f:
+                # Assuming the format is: identity video_path
+                parts = line.strip().split()
+                identity = parts[0]
+                video_path = self.root_dir / self.split / parts[1]
+                
+                if identity not in self.videos_by_identity:
+                    self.videos_by_identity[identity] = []
+                self.videos_by_identity[identity].append(video_path)
         self.video_paths = []
         split_dir = self.root_dir / self.split
 
@@ -431,7 +444,7 @@ def create_voxceleb2_dataloader(
     frames_per_clip=16,
     frame_size=(112, 112),
     max_audio_length=30,
-    n_mels=80,
+    n_mels=128,
 ):
     """
     Create a DataLoader for the VoxCeleb2 dataset
@@ -458,7 +471,6 @@ def create_voxceleb2_dataloader(
     return dataloader
 
 
-# TODO: make this more efficient
 def custom_collate_fn(batch):
     """
     Custom collate function to pad:
@@ -521,3 +533,4 @@ def custom_collate_fn(batch):
         "frame_times": frame_times,  # shape: (batch_size, max_seq_length)
         "video_path": video_paths,
     }
+

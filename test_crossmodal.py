@@ -132,6 +132,15 @@ def main():
             plt.show()
             
             print("\n" + "="*50 + "\n")
+            
+            
+            
+            
+            
+            
+
+
+
 
 if __name__ == "__main__":
     try:
