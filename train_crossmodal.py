@@ -166,7 +166,7 @@ def main():
     criterion = nn.MSELoss() 
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     
-    dataset_path = Path(r"E:\MAI\git2\Project-Lab-MAI\datasets")
+    dataset_path = Path(r"E:\MAI Dataset")
     
     train_loader = create_voxceleb2_dataloader(
         root_dir=dataset_path,

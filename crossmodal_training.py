@@ -316,7 +316,7 @@ class VoxCeleb2Dataset(Dataset):
         frame_size=(112, 112),
         max_audio_length=30,  # maximum audio length in seconds
         n_mels=128, # is 128 for v3
-        train_list_path = ""
+        train_list_path = "datasets/test/train_list.txt"
     ):
         """
         Args:
@@ -335,32 +335,35 @@ class VoxCeleb2Dataset(Dataset):
         self.n_mels = n_mels
         # Load video paths
         
+        self.video_paths = []
         self.videos_by_identity = {}
         with open(train_list_path, 'r') as f:
             for line in f:
                 # Assuming the format is: identity video_path
                 parts = line.strip().split()
                 identity = parts[0]
-                video_path = self.root_dir / self.split / parts[1]
+                video_path = self.root_dir / self.split / Path("mp4") / (parts[1][:-3] + "mp4")
                 
                 if identity not in self.videos_by_identity:
                     self.videos_by_identity[identity] = []
                 self.videos_by_identity[identity].append(video_path)
-        self.video_paths = []
-        split_dir = self.root_dir / self.split
+                self.video_paths.append(video_path)
+        
+        # self.video_paths = []
+        # split_dir = self.root_dir / self.split
+        
+        # for person_id in os.listdir(split_dir):
+        #     person_dir = split_dir / person_id
+        #     if not person_dir.is_dir():
+        #         continue
 
-        for person_id in os.listdir(split_dir):
-            person_dir = split_dir / person_id
-            if not person_dir.is_dir():
-                continue
+        #     for video_id in os.listdir(person_dir):
+        #         video_dir = person_dir / video_id
+        #         if not video_dir.is_dir():
+        #             continue
 
-            for video_id in os.listdir(person_dir):
-                video_dir = person_dir / video_id
-                if not video_dir.is_dir():
-                    continue
-
-                for video_file in video_dir.glob("*.mp4"):
-                    self.video_paths.append(video_file)
+        #         for video_file in video_dir.glob("*.mp4"):
+        #             self.video_paths.append(video_file)
 
         # Video transforms from marcels file
         self.video_transforms = transforms.Compose(
