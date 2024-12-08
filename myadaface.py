@@ -1,137 +1,69 @@
-from pathlib import Path
 import random
+import time
+from pathlib import Path
+
+import matplotlib.pyplot as plt
 import torch
-import torch.utils.data as data
 import torch.nn as nn
+import torch.utils.data as data
+from AdaFace.inference import load_pretrained_model
+from crossmodal_training import VoxCeleb2Dataset, create_voxceleb2_dataloader
+from loss_function import intra_modal_consistency_loss
 from torch.nn import functional as F
 from torch.optim import lr_scheduler
-
-from AdaFace.inference import load_pretrained_model
-import time
 from tqdm import tqdm
-from crossmodal_training import (
-    MultiModalFeatureExtractor,
-    VoxCeleb2Dataset,
-    create_voxceleb2_dataloader,
-)
-from loss_function import intra_modal_consistency_loss
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 dataset = VoxCeleb2Dataset("datasets", split="test")
 dataloader = create_voxceleb2_dataloader(
-    root_dir="datasets", split="test", batch_size=2, num_workers=2
+    root_dir="datasets", split="test", batch_size=8
 )
-extractor = MultiModalFeatureExtractor()
 model = load_pretrained_model("ir_50").to(device)
 
 
-def get_all_identities(split="test"):
-    """
-    Returns a list of all unique identity IDs in the dataset.
-    """
-    root_dir = Path(dataset.root_dir)
-    split_dir = root_dir / ("dev" if split == "train" else "test")
-    identities = [d.name for d in split_dir.iterdir() if d.is_dir()]
-    return identities
-
-
-def get_identity_videos(split="test"):
-    """
-    Returns a dictionary mapping each identity ID to a list of their video paths.
-    """
-    root_dir = Path(dataset.root_dir)
-    split_dir = root_dir / ("dev" if split == "train" else "test")
-    identity_videos = {}
-
-    for person_dir in split_dir.iterdir():
-        if not person_dir.is_dir():
-            continue
-        person_id = person_dir.name
-        video_paths = []
-
-        for video_dir in person_dir.iterdir():
-            if not video_dir.is_dir():
-                continue
-            for video_file in video_dir.glob("*.mp4"):
-                video_paths.append(video_file)
-
-        if video_paths:
-            identity_videos[person_id] = video_paths
-
-    return identity_videos
-
-
 def train_adaface(model):
-    # Training parameters
-    learning_rate = 3e-6
+    # use 1e-3 as lr for fine tuning, since authors used 1e-2 to pre train AdaFace
+    learning_rate = 1e-3
+    epochs = 1
 
     optimizer = torch.optim.Adam(model.parameters(), lr=learning_rate)
-    scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
-    total_loss = 0
+    # scheduler = lr_scheduler.StepLR(optimizer, step_size=30, gamma=0.1)
+    losses = []
     num_batches = len(dataloader.dataset) // dataloader.batch_sampler.batch_size
     progress_bar = tqdm(total=num_batches, desc="Processing")
 
-    batch_idx = 0
-    for batch in dataloader:
+    for epoch in range(epochs):
+        progress_bar.set_description(f"Epoch {epoch+1}/{epochs}")
+        for batch in tqdm(dataloader, desc=f"Batch Progress", leave=False):
+            progress_bar.update(1)
 
-        last_time = time.time()
-        optimizer.zero_grad()
-        frames = batch["frames"].to(device)
-        batch_size, num_frames = frames.shape[:2]
-        frame_features = []
+            optimizer.zero_grad()
+            frames = batch["frames"].to(device)
+            batch_size, num_frames = frames.shape[:2]
+            frame_features = []
 
-        # Process each frame individually through AdaFace
-        for i in range(num_frames):
-            frame = frames[:, i]  # (batch_size, 3, 112, 112)
-            frame = frame.contiguous()
-            features = model(frame)[0]  # Get identity features
-            frame_features.append(features)
+            for i in range(batch_size):
+                batch_frames = frames[i].contiguous()
+                identity_features = model(batch_frames)[0]
+                frame_features.append(identity_features)
+            frame_features = torch.stack(frame_features)
 
-        # Stack frame features
-        frame_features = torch.stack(
-            frame_features, dim=1
-        )  # (batch_size, num_frames, 512)
-        # Move features to device
-        frame_features = frame_features.to(device)
+            # Compute loss
+            loss = intra_modal_consistency_loss(frame_features)
+            losses.append(loss.item())
+            print(loss)
 
-        # Forward pass through the model (if applicable)
-        # If the model processes the features further, include it here
+            # Backpropagation
+            loss.backward()
 
-        # Compute loss
-        loss = intra_modal_consistency_loss(frame_features)
+            optimizer.step()
 
-        current_time = time.time()
-        print(f"Loss computation took {current_time - last_time:.4f} seconds")
-        last_time = current_time
+            # Adjust learning rate
+            # scheduler.step()
 
-        # Backpropagation
-        loss.backward()
-
-        current_time = time.time()
-        print(f"Backward pass took {current_time - last_time:.4f} seconds")
-        last_time = current_time
-
-        optimizer.step()
-
-        current_time = time.time()
-        print(f"Optimizer step took {current_time - last_time:.4f} seconds")
-        last_time = current_time
-
-        # Accumulate and display loss
-        total_loss += loss.item()
-        print(f"Accumulate loss: {total_loss}")
-        # Update progress bar manually
-        progress_bar.update(1)
-        # Update description dynamically
-        progress_bar.set_description(f"Batch {batch_idx + 1}/{num_batches}")
-        batch_idx += 1
-        # Adjust learning rate
-        scheduler.step()
-
-    # Save final model
-    torch.save(model.state_dict(), "adaface_finetuned.pth")
+        # Save final model
+        torch.save(model.state_dict(), "adaface_finetuned.pth")
 
 
 if __name__ == "__main__":
-
     train_adaface(model)

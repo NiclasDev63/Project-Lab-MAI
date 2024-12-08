@@ -1,23 +1,24 @@
+import os
 import random
+from pathlib import Path
+
 import torch
 import torch.nn as nn
-from torch.nn import TransformerEncoder, TransformerEncoderLayer
+import torchaudio
+import torchvision.transforms as transforms
 import whisper
 from AdaFace.inference import load_pretrained_model
-from torch.utils.data import Dataset, DataLoader
-import torchvision.transforms as transforms
-from torchvision.io import read_video, read_video_timestamps
-import os
-from pathlib import Path
-from torchvision.transforms.functional import InterpolationMode
 from data_loader.vox_celeb2.video_transforms import (
-    SquareVideo,
-    ResizeVideo,
-    ToTensorVideo,
     NormalizeVideo,
+    ResizeVideo,
+    SquareVideo,
+    ToTensorVideo,
 )
-import torchaudio
+from torch.nn import TransformerEncoder, TransformerEncoderLayer
+from torch.utils.data import DataLoader, Dataset
 from torch.utils.data.sampler import Sampler
+from torchvision.io import read_video, read_video_timestamps
+from torchvision.transforms.functional import InterpolationMode
 
 
 class IdentityBatchSampler(Sampler):
