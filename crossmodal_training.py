@@ -106,7 +106,7 @@ class MultiModalFeatureExtractor(nn.Module):
         frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)  # Shape: (batch_size * num_frames, 3, 112, 112)
         
         pil_images = [Image.fromarray(frame.permute(1, 2, 0).byte().cpu().numpy()) for frame in frames_reshaped]
-        aligned_pil_images = [align.get_aligned_face(rgb_pil_image=img) for img in pil_images]
+        aligned_pil_images = [align.get_aligned_face("",rgb_pil_image=img) for img in pil_images]
         aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])  # Convert and stack tensors
         aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])  # Reshape back
 
