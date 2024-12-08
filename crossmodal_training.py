@@ -1,5 +1,6 @@
 import os
 from pathlib import Path
+from AdaFace.face_alignment.align import get_aligned_face
 
 import torch
 import torch.nn as nn
@@ -11,7 +12,8 @@ from torch.utils.data import DataLoader, Dataset
 from torchvision.io import read_video, read_video_timestamps
 from torchvision.transforms.functional import InterpolationMode
 
-from AdaFace.inference import load_pretrained_model
+from AdaFace.face_alignment import align
+from AdaFace.inference import load_pretrained_model, to_input
 from data_loader.vox_celeb2.video_transforms import (
     NormalizeVideo,
     ResizeVideo,
@@ -108,6 +110,8 @@ class MultiModalFeatureExtractor(nn.Module):
         for i in range(num_frames):
             self.adaface.train()
             frame = frames[:, i]  # (batch_size, 3, 112, 112)
+            aligned_rgb_img = align.get_aligned_face(path)
+            bgr_input = to_input(aligned_rgb_img)
             frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
             
