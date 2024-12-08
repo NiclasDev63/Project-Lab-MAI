@@ -346,7 +346,7 @@ class VoxCeleb2Dataset(Dataset):
                 # Assuming the format is: identity video_path
                 parts = line.strip().split()
                 identity = parts[0]
-                video_path = self.root_dir / self.split / Path("mp4") / (parts[1][:-3] + "mp4")
+                video_path = self.root_dir / "dev" / Path("mp4") / (parts[1][:-3] + "mp4")
                 
                 if identity not in self.videos_by_identity:
                     self.videos_by_identity[identity] = []

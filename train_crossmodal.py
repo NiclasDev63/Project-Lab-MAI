@@ -166,13 +166,13 @@ def main():
     criterion = nn.MSELoss() 
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     
-    dataset_path = Path(r"E:\MAI Dataset")
+    dataset_path = Path(r"/work/scratch/kurse/kurs00079/data/vox2")
     
     train_loader = create_voxceleb2_dataloader(
         root_dir=dataset_path,
         batch_size=config["batch_size"],
         num_workers=0,
-        split='train',
+        split='dev',
         frames_per_clip=25,
         frame_size=(112, 112),
         max_audio_length=30
@@ -182,7 +182,7 @@ def main():
         root_dir=dataset_path,
         batch_size=2,
         num_workers=0,
-        split='val',
+        split='dev',
         frames_per_clip=25,
         frame_size=(112, 112),
         max_audio_length=30

@@ -1,0 +1,43 @@
+{
+  "os": "Linux-4.18.0-553.27.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "CPython 3.9.5",
+  "startedAt": "2024-12-08T18:50:11.977622Z",
+  "program": "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/train_crossmodal.py",
+  "codePath": "train_crossmodal.py",
+  "git": {
+    "remote": "git@github.com:NiclasDev63/Project-Lab-MAI.git",
+    "commit": "e5024ac26648c672678781e56885478ab3b918e5"
+  },
+  "email": "oliver.grein@stud.tu-darmstadt.de",
+  "root": "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI",
+  "host": "logc0001",
+  "username": "og70qiri",
+  "executable": "/work/home/og70qiri/MAI/MAI/bin/python",
+  "codePathLocal": "train_crossmodal.py",
+  "cpu_count": 96,
+  "cpu_count_logical": 96,
+  "gpu": "Tesla T4",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "405113323520",
+      "used": "10285191168"
+    }
+  },
+  "memory": {
+    "total": "810226647040"
+  },
+  "cpu": {
+    "count": 96,
+    "countLogical": 96
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla T4",
+      "memoryTotal": "16106127360",
+      "cudaCores": 2560,
+      "architecture": "Turing"
+    }
+  ],
+  "cudaVersion": "12.5"
+}

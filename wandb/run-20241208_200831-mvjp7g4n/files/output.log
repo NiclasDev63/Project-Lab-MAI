@@ -1,0 +1,32 @@
+/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/AdaFace/inference.py:18: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  statedict = torch.load(adaface_models[architecture])["state_dict"]
+/work/home/og70qiri/MAI/MAI/lib/python3.9/site-packages/whisper/__init__.py:150: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  checkpoint = torch.load(fp, map_location=device)
+Starting training...
+
+Epoch 1/10
+Training:   0%|                                                                                                                                                                                                                                                    | 0/546004 [00:00<?, ?it/s]/work/home/og70qiri/MAI/MAI/lib/python3.9/site-packages/torchvision/io/video.py:169: UserWarning: The pts_unit 'pts' gives wrong results. Please use pts_unit 'sec'.
+  warnings.warn("The pts_unit 'pts' gives wrong results. Please use pts_unit 'sec'.")
+/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/crossmodal_training.py:494: UserWarning: To copy construct from a tensor, it is recommended to use sourceTensor.clone().detach() or sourceTensor.clone().detach().requires_grad_(True), rather than torch.tensor(sourceTensor).
+  mel_spectrograms = [torch.tensor(item["mel_spectrogram"]) for item in batch]
+frames shape:  torch.Size([2, 383, 3, 112, 112])
+mel_features shape:  torch.Size([2, 128, 3000])
+original_lengths shape:  torch.Size([2])
+frame_timestamps shape:  torch.Size([2, 383])
+Traceback (most recent call last):                                                                                                                                                                                                                                                            
+An error occurred: name 'path' is not defined
+  File "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/train_crossmodal.py", line 260, in <module>
+    main()
+  File "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/train_crossmodal.py", line 205, in main
+    train_metrics = train_epoch(model, train_loader, criterion, optimizer, device)
+  File "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/train_crossmodal.py", line 49, in train_epoch
+    combined_features = model(
+  File "/work/home/og70qiri/MAI/MAI/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/home/og70qiri/MAI/MAI/lib/python3.9/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/crossmodal_training.py", line 238, in forward
+    visual_features = self.process_frames(frames, original_lengths)
+  File "/work/scratch/kurse/kurs00079/data/vox2/shared_code/Project-Lab-MAI/crossmodal_training.py", line 113, in process_frames
+    aligned_rgb_img = align.get_aligned_face(path)
+NameError: name 'path' is not defined
