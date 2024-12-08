@@ -30,7 +30,7 @@ def get_aligned_face(image_path, rgb_pil_image=None):
     except Exception as e:
         print('Face detection Failed due to error.')
         print(e)
-        face = None
+        face = rgb_pil_image
 
     return face
 
