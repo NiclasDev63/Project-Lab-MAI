@@ -1,0 +1,47 @@
+{
+  "os": "Windows-11-10.0.22631-SP0",
+  "python": "CPython 3.12.7",
+  "startedAt": "2024-12-08T16:42:05.823825Z",
+  "args": [
+    "--data_root",
+    "datasets"
+  ],
+  "program": "C:\\Users\\nicla\\Desktop\\UNI\\Informatik\\PL_MAI\\Project-Lab-MAI\\train_intra_loss.py",
+  "codePath": "train_intra_loss.py",
+  "git": {
+    "remote": "git@github.com:NiclasDev63/Project-Lab-MAI.git",
+    "commit": "710c770099a8dda28e885927aa67e870d1ec0171"
+  },
+  "email": "niclas.gregor20@gmail.com",
+  "root": "C:\\Users\\nicla\\Desktop\\UNI\\Informatik\\PL_MAI\\Project-Lab-MAI",
+  "host": "NiclasComputer",
+  "username": "nicla",
+  "executable": "C:\\Users\\nicla\\anaconda3\\envs\\PL_MAI\\python.exe",
+  "codePathLocal": "train_intra_loss.py",
+  "cpu_count": 16,
+  "cpu_count_logical": 24,
+  "gpu": "NVIDIA GeForce RTX 3080",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "998382419968",
+      "used": "906486411264"
+    }
+  },
+  "memory": {
+    "total": "34171731968"
+  },
+  "cpu": {
+    "count": 16,
+    "countLogical": 24
+  },
+  "gpu_nvidia": [
+    {
+      "name": "NVIDIA GeForce RTX 3080",
+      "memoryTotal": "12884901888",
+      "cudaCores": 8960,
+      "architecture": "Ampere"
+    }
+  ],
+  "cudaVersion": "12.7"
+}

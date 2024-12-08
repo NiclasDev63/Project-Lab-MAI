@@ -7,17 +7,28 @@ import torch
 import torch.nn as nn
 import torch.utils.data as data
 from AdaFace.inference import load_pretrained_model
-from crossmodal_training import VoxCeleb2Dataset, create_voxceleb2_dataloader
+from data_loader.vox_celeb2.VoxCeleb2Ada import (
+    VoxCeleb2Ada,
+    create_voxceleb2_adaface_dataloader,
+)
+
+# from crossmodal_training import VoxCeleb2Dataset, create_voxceleb2_dataloader
 from loss_function import intra_modal_consistency_loss
 from torch.nn import functional as F
 from torch.optim import lr_scheduler
 from tqdm import tqdm
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-dataset = VoxCeleb2Dataset("datasets", split="test")
-dataloader = create_voxceleb2_dataloader(
-    root_dir="datasets", split="test", batch_size=8
+# dataset = VoxCeleb2Dataset("datasets", split="test")
+# dataloader = create_voxceleb2_dataloader(
+#     root_dir="datasets", split="test", batch_size=8
+# )
+
+dataloader = create_voxceleb2_adaface_dataloader(
+    root_dir="datasets/train", batch_size=8
 )
+
+
 model = load_pretrained_model("ir_50").to(device)
 
 
@@ -51,7 +62,6 @@ def train_adaface(model):
             # Compute loss
             loss = intra_modal_consistency_loss(frame_features)
             losses.append(loss.item())
-            print(loss)
 
             # Backpropagation
             loss.backward()

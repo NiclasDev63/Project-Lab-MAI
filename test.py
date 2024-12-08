@@ -1,45 +1,59 @@
-import json
-
 import torch
-from torchvision.transforms import v2 as T
-
-from data_loader.vox_celeb2.main import (
-    VoxCeleb2,
-    get_train_list,
+from data_loader.vox_celeb2.VoxCeleb2Ada import (
+    create_train_dict,
     idx_to_speaker_id,
     speaker_id_to_idx,
 )
-from data_loader.vox_celeb2.video_transforms import (
-    NormalizeVideo,
-    ResizeVideo,
-    SquareVideo,
-    ToTensorVideo,
-)
+from torch.nn import functional as F
+from torchvision.io import read_video
 
-train_path = "datasets/test/id00528"
-train_list_path = "datasets/train_list.txt"
-speaker_idx = 348  # equals speaker id00528
-video_transform = T.Compose(
-    [
-        SquareVideo(),
-        ResizeVideo((224, 224), T.InterpolationMode.BICUBIC),
-        ToTensorVideo(),
-    ]
-)
-vox_celeb2_dataset = VoxCeleb2(
-    data_root="./datasets/test", video_transform=video_transform
-)
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+path = "datasets/train"
+# video_path = "datasets/train/id00019/_lmvY4AiroM/00121.mp4"
 
-sample = vox_celeb2_dataset[speaker_idx]
-audio_sample = sample["audio"].to(device)
+# video, _, _ = read_video(video_path)
+
+# print(video.shape)
 
 
-# train_list = get_train_list("./datasets/test")
-# speaker_id = "id00528"
-# sample = json.dumps(train_list[speaker_id], indent=4)
-# id_to_idx = speaker_id_to_idx(train_list)
-# idx_to_id = idx_to_speaker_id(train_list)
+batch_videos = torch.randn(30, 64, 64, 3)
 
-# print(id_to_idx[speaker_id])
-# print(idx_to_id[id_to_idx[speaker_id]])
+padding = (
+    0,
+    0,
+    0,
+    0,
+    0,
+    0,
+    10,
+    0,
+)  # Format: (left, right, top, bottom, front, back, d1_front, d1_back)
+
+padded_videos = F.pad(batch_videos, padding, value=0)
+
+print(padded_videos.shape)
+
+# train_dict = create_train_dict(path)
+
+# keys = list(train_dict.keys())
+# print("--------------------------------\n")
+
+# print(train_dict[keys[0]])
+# print("--------------------------------\n")
+
+# scene_keys = list(train_dict[keys[0]].keys())
+# print("--------------------------------\n")
+
+# print(scene_keys[0])
+
+# print("--------------------------------\n")
+
+# print(train_dict[keys[0]][scene_keys[0]])
+# print("--------------------------------\n")
+
+
+# print(speaker_id_to_idx(train_dict))
+
+# print("--------------------------------\n")
+
+
+# print(idx_to_speaker_id(train_dict))
