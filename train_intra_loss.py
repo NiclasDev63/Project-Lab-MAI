@@ -150,11 +150,11 @@ def main():
         "learning_rate": args.learning_rate,
     }
 
-    # wandb.init(
-    #     project=experiment_name,
-    #     name=run_name,
-    #     config=config,
-    # )
+    wandb.init(
+        project=experiment_name,
+        name=run_name,
+        config=config,
+    )
 
     print("Starting training...")
 
