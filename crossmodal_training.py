@@ -1,6 +1,5 @@
 import os
 from pathlib import Path
-from AdaFace.face_alignment.align import get_aligned_face
 
 import torch
 import torch.nn as nn
@@ -102,7 +101,18 @@ class MultiModalFeatureExtractor(nn.Module):
             frames: tensor of shape (batch_size, num_frames, 3, 112, 112)
         """
         # How do we use batches with movies of differing lengths ????? 
-        batch_size, num_frames = frames.shape[:2]
+        batch_size, num_frames, channels, height, width = frames.shape
+        frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)  # Shape: (batch_size * num_frames, 3, 112, 112)
+
+        # Apply alignment to all frames
+        aligned_frames = torch.stack([
+            to_input(align.get_aligned_face(rgb_pil_image=frame)) 
+            for frame in frames_reshaped
+        ])  # Shape: (batch_size * num_frames, processed_channels, new_height, new_width)
+
+        # Reshape aligned frames back to original frame structure
+        aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])  # Shape: (batch_size, num_frames, processed_channels, new_height, new_width)
+
         frame_features = []
         
         
@@ -110,8 +120,6 @@ class MultiModalFeatureExtractor(nn.Module):
         for i in range(num_frames):
             self.adaface.train()
             frame = frames[:, i]  # (batch_size, 3, 112, 112)
-            aligned_rgb_img = align.get_aligned_face(path)
-            bgr_input = to_input(aligned_rgb_img)
             frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
             
@@ -267,50 +275,6 @@ class MultiModalFeatureExtractor(nn.Module):
         return combined_features
 
 
-def train_multimodal_system(
-    model, train_loader, num_epochs=10, learning_rate=1e-4, device="cuda"
-):
-    model = model.to(device)
-    optimizer = torch.optim.AdamW(model.parameters(), lr=learning_rate)
-
-    for epoch in range(num_epochs):
-        model.train()
-        total_loss = 0
-
-        for batch_idx, (video_frames, audio_data, frame_times) in enumerate(
-            train_loader
-        ):
-            # Prepare batch data
-            frames, audio, audio_lengths, timestamps = prepare_batch_data(
-                video_frames, audio_data, frame_times
-            )
-
-            # c-c-c-cuda
-            frames = frames.to(device)
-            audio = audio.to(device)
-            audio_lengths = audio_lengths.to(device)
-            timestamps = timestamps.to(device)
-
-            # Forward pass
-            combined_features = model(frames, audio, audio_lengths, timestamps)
-
-            # TODO: Add loss here
-            loss = compute_loss(combined_features)
-
-            # Backward pass
-            optimizer.zero_grad()
-            loss.backward()
-            optimizer.step()
-
-            total_loss += loss.item()
-
-            if batch_idx % 10 == 0:
-                print(f"Epoch: {epoch}, Batch: {batch_idx}, Loss: {loss.item():.4f}")
-
-        avg_loss = total_loss / len(train_loader)
-        print(f"Epoch: {epoch}, Average Loss: {avg_loss:.4f}")
-
-
 class VoxCeleb2Dataset(Dataset):
     def __init__(
         self,
@@ -373,8 +337,8 @@ class VoxCeleb2Dataset(Dataset):
         self.video_transforms = transforms.Compose(
             [
                 SquareVideo(),
-                # convert rgb to bgr as described in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
-                transforms.Lambda(lambda x: x[:, [2, 1, 0], :, :]),
+                # removed due to frame processing needing rgb convert rgb to bgr as described in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
+                #transforms.Lambda(lambda x: x[:, [2, 1, 0], :, :]),
                 ResizeVideo(frame_size, InterpolationMode.BILINEAR),
                 ToTensorVideo(max_pixel_value=255.0),
                 # use mean and std as describe in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
