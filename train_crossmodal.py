@@ -8,7 +8,7 @@ import numpy as np
 from tqdm import tqdm
 import wandb 
 import uuid  # For generating unique run names
-
+import time
 from crossmodal_training import (
     MultiModalFeatureExtractor,
     create_voxceleb2_dataloader
@@ -200,13 +200,13 @@ def main():
     # Main training loop
     for epoch in range(10):  # 10 epochs as requested
         print(f"\nEpoch {epoch + 1}/10")
-        
+        start_time = time.time()
         # Train for one epoch
         train_metrics = train_epoch(model, train_loader, criterion, optimizer, device)
         
         # Validate
         val_metrics = validate_model(model, val_loader, criterion, device)
-        
+        epoch_duration = time.time() - start_time
         # Store metrics
         training_history['train_loss'].append(train_metrics['loss'])
         training_history['val_loss'].append(val_metrics['val_loss'])
@@ -225,6 +225,7 @@ def main():
         wandb.log({
             "train_loss": train_metrics['loss'],
             "val_loss": val_metrics['val_loss'],
+            "epoch_duration": epoch_duration,
             "checkpoint": wandb.Artifact(
                 name=f"checkpoint-epoch-{epoch+1}", 
                 type="model",
