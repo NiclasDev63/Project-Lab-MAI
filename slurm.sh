@@ -17,6 +17,6 @@ module load gcc/8 python/3.9
 cd /work/scratch/kurse/kurs00079/data/vox2/
 source shared_env/shared_env3.9/bin/activate
 cd shared_code/Project-Lab-MAI
-python train_crossmodal
+python train_crossmodal.py
 
 exit $EXITCODE
