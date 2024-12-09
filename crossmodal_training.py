@@ -279,25 +279,33 @@ class VoxCeleb2Dataset(Dataset):
         split="train",
         frames_per_clip=25,
         frame_size=(112, 112),
-        max_audio_length=30,  # maximum audio length in seconds
-        n_mels=128, # is 128 for v3
-        train_list_path = "datasets/test/train_list.txt"
+        max_video_length=10,  # Maximum video length in seconds
+        max_audio_length=30,  # Maximum audio length in seconds for Whisper
+        goal_fps=None,  # Optional frame rate reduction
+        n_mels=128,
+        train_list_path="datasets/test/train_list.txt"
     ):
         """
         Args:
             root_dir: Path to VoxCeleb2 dataset root
             split: 'train' or 'test'
-            frames_per_clip: Number of frames to sample from each video
+            frames_per_clip: Maximum number of frames to sample
             frame_size: Size to resize frames to (height, width)
-            max_audio_length: Maximum audio length in seconds
+            max_video_length: Maximum video length in seconds for frames
+            max_audio_length: Maximum audio length in seconds (for Whisper)
+            goal_fps: Optional target frame rate to reduce video frames
+            n_mels: Number of mel spectrogram bins
         """
         super().__init__()
         self.root_dir = Path(root_dir)
         self.split = "dev" if split == "train" else "test"
         self.frames_per_clip = frames_per_clip
         self.frame_size = frame_size
+        self.max_video_length = max_video_length
         self.max_audio_length = max_audio_length
+        self.goal_fps = goal_fps
         self.n_mels = n_mels
+
         # Load video paths
         
         self.video_paths = []
@@ -347,24 +355,32 @@ class VoxCeleb2Dataset(Dataset):
         self.whisper_processor = whisper.log_mel_spectrogram
 
     def _load_video_frames(self, video_path):
-        """Load and process video frames"""
+        """Load and process video frames with optional frame rate reduction"""
         # Get video timestamps first
         pts, fps = read_video_timestamps(str(video_path))
         
         # Convert pts to tensor
         pts_tensor = torch.tensor(pts)
 
-        # start_pts = min(pts)
-        # end_pts = max(pts)
-
-        # Read video at selected timestamps
+        # Read video 
         frames, audio, info = read_video(
             str(video_path),
-            # start_pts=start_pts,
-            # end_pts=end_pts,
             output_format="TCHW",  # Returns frames in format (time, channels, height, width)
         )
 
+        # Optional frame rate reduction
+        if self.goal_fps and self.goal_fps < info['video_fps']:
+            # Calculate frame skip interval
+            skip_interval = max(1, int(round(info['video_fps'] / self.goal_fps)))
+            frames = frames[::skip_interval]
+            pts_tensor = pts_tensor[::skip_interval]
+
+        # Trim or pad frames to max_video_length
+        max_frames = int(self.max_video_length * info['video_fps'])
+        if frames.size(0) > max_frames:
+            frames = frames[:max_frames]
+            pts_tensor = pts_tensor[:max_frames]
+        
         # Apply video transforms
         frames = self.video_transforms(frames)
         frame_times = pts_tensor
@@ -411,7 +427,9 @@ def create_voxceleb2_dataloader(
     split="train",
     frames_per_clip=16,
     frame_size=(112, 112),
+    max_video_length=10,
     max_audio_length=30,
+    goal_fps=None,
     n_mels=128,
 ):
     """
@@ -422,7 +440,9 @@ def create_voxceleb2_dataloader(
         split=split,
         frames_per_clip=frames_per_clip,
         frame_size=frame_size,
+        max_video_length=max_video_length,
         max_audio_length=max_audio_length,
+        goal_fps=goal_fps,
         n_mels=n_mels,
     )
 
