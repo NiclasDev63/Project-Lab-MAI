@@ -28,8 +28,8 @@ def get_aligned_face(image_path, rgb_pil_image=None):
         bboxes, faces = mtcnn_model.align_multi(img, limit=1)
         face = faces[0]
     except Exception as e:
-        print('Face detection Failed due to error.')
-        print(e)
+        #print('Face detection Failed due to error.')
+        #print(e)
         face = rgb_pil_image
 
     return face

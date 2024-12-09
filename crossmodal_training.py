@@ -172,10 +172,7 @@ class MultiModalFeatureExtractor(nn.Module):
             closest_idx = torch.argmin(distances).item()
             frame_indices.append(closest_idx)
 
-        
-        print(audio_features.shape)
-        
-        print(frame_indices)
+
         # Get corresponding audio features and concatenate
         aligned_audio = audio_features[frame_indices]
         combined_features = torch.cat(
