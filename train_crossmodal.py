@@ -175,18 +175,10 @@ def main():
         split='dev',
         frames_per_clip=25,
         frame_size=(112, 112),
-        max_audio_length=30
+        max_audio_length=30,
+        goal_fps=5
     )
     
-    val_loader = create_voxceleb2_dataloader(
-        root_dir=dataset_path,
-        batch_size=2,
-        num_workers=0,
-        split='dev',
-        frames_per_clip=25,
-        frame_size=(112, 112),
-        max_audio_length=30
-    )
     
     # Training loop
     print("Starting training...")
@@ -205,11 +197,11 @@ def main():
         train_metrics = train_epoch(model, train_loader, criterion, optimizer, device)
         
         # Validate
-        val_metrics = validate_model(model, val_loader, criterion, device)
+        #val_metrics = validate_model(model, train_loader, criterion, device)
         epoch_duration = time.time() - start_time
         # Store metrics
         training_history['train_loss'].append(train_metrics['loss'])
-        training_history['val_loss'].append(val_metrics['val_loss'])
+        #training_history['val_loss'].append(val_metrics['val_loss'])
         
         # Save checkpoint
         checkpoint_path = f'checkpoint_epoch_{epoch+1}.pth'
@@ -218,13 +210,13 @@ def main():
             'model_state_dict': model.state_dict(),
             'optimizer_state_dict': optimizer.state_dict(),
             'train_loss': train_metrics['loss'],
-            'val_loss': val_metrics['val_loss']
+          #  'val_loss': val_metrics['val_loss']
         }, checkpoint_path)
         
         # Log metrics and checkpoint to wandb
         wandb.log({
             "train_loss": train_metrics['loss'],
-            "val_loss": val_metrics['val_loss'],
+          #  "val_loss": val_metrics['val_loss'],
             "epoch_duration": epoch_duration,
             "checkpoint": wandb.Artifact(
                 name=f"checkpoint-epoch-{epoch+1}", 
@@ -232,19 +224,19 @@ def main():
                 metadata={
                     "epoch": epoch+1,
                     "train_loss": train_metrics['loss'],
-                    "val_loss": val_metrics['val_loss']
+               #     "val_loss": val_metrics['val_loss']
                 }
             )
         })
         
         # Print epoch summary
         print(f"Train Loss: {train_metrics['loss']:.4f}")
-        print(f"Val Loss: {val_metrics['val_loss']:.4f}")
+     #   print(f"Val Loss: {val_metrics['val_loss']:.4f}")
     
     # Plot training history
     plt.figure(figsize=(10, 5))
     plt.plot(training_history['train_loss'], label='Train Loss')
-    plt.plot(training_history['val_loss'], label='Validation Loss')
+    #plt.plot(training_history['val_loss'], label='Validation Loss')
     plt.title('Training and Validation Loss')
     plt.xlabel('Epoch')
     plt.ylabel('Loss')
