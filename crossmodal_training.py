@@ -173,7 +173,7 @@ class MultiModalFeatureExtractor(nn.Module):
             frame_indices.append(closest_idx)
 
         
-        print(aligned_audio.shape)
+        print(audio_features.shape)
         
         print(frame_indices)
         # Get corresponding audio features and concatenate
