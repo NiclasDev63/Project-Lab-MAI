@@ -154,49 +154,33 @@ class MultiModalFeatureExtractor(nn.Module):
         return extracted_features
 
     def align_and_combine(
-       self, visual_features, audio_features, frame_timestamps, audio_timestamps
+        self, visual_features, audio_features, frame_timestamps, audio_timestamps
     ):
         """
-        Align and combine visual and audio features for a batch of sequences
+        Align and combine visual and audio features
 
         Args:
-            visual_features: tensor of shape (batch_size, num_frames, 512)
-            audio_features: list of tensors, each of shape (audio_time, 1280)
-            frame_timestamps: tensor of shape (batch_size, num_frames)
-            audio_timestamps: tensor of shape (batch_size, audio_time)
+            visual_features: tensor of shape (num_frames, 512)
+            audio_features: tensor of shape (audio_time, 1280)
+            frame_timestamps: tensor of shape (num_frames,)
+            audio_timestamps: tensor of shape (audio_time,)
         """
-        batch_size, num_frames, _ = visual_features.shape
-        combined_features = []
+        # For each frame timestamp, find the closest audio timestamp
+        frame_indices = []
+        for frame_time in frame_timestamps:
+            distances = torch.abs(audio_timestamps - frame_time)
+            closest_idx = torch.argmin(distances).item()
+            frame_indices.append(closest_idx)
 
-        for b in range(batch_size):
-            # Get features for current sequence in the batch
-            seq_visual = visual_features[b]
-            seq_audio = audio_features[b]
-            seq_frame_times = frame_timestamps[b]
-            seq_audio_timestamps = audio_timestamps[b]
-
-            # Find closest audio timestamp for each frame
-            frame_indices = []
-            for frame_time in seq_frame_times:
-                if frame_time == 0:  # Handle padding case
-                    frame_indices.append(0)
-                else:
-                    # Find closest audio timestamp
-                    distances = torch.abs(seq_audio_timestamps - frame_time)
-                    closest_idx = torch.argmin(distances)
-                    frame_indices.append(closest_idx)
-
-            # Get corresponding audio features
-            aligned_audio = seq_audio[frame_indices]
-
-            # Concatenate visual and aligned audio features
-            seq_combined = torch.cat(
-                [seq_visual, aligned_audio], dim=-1
-            )  # Shape: (num_frames, 1792)
-            combined_features.append(seq_combined)
-
-        # Stack combined features for the batch
-        combined_features = torch.stack(combined_features, dim=0)
+        
+        print(audio_features.shape)
+        
+        print(frame_indices)
+        # Get corresponding audio features and concatenate
+        aligned_audio = audio_features[frame_indices]
+        combined_features = torch.cat(
+            [visual_features, aligned_audio], dim=-1
+        )  # (num_frames, 1792)
         return combined_features
 
     # TODO: test this
