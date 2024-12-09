@@ -14,60 +14,97 @@ from crossmodal_training import (
     create_voxceleb2_dataloader
 )
 
+import torch
+import gc
+
 def train_epoch(model, train_loader, criterion, optimizer, device):
     """
-    Train the model for one epoch
-    
-    Args:
-        model (nn.Module): The multi-modal feature extractor
-        train_loader (DataLoader): Training data loader
-        criterion (nn.Module): Loss function
-        optimizer (torch.optim.Optimizer): Optimizer
-        device (torch.device): Computing device
-    
-    Returns:
-        dict: Training metrics for the epoch
+    Train the model for one epoch with memory diagnostics
     """
     model.train()
     total_loss = 0.0
     batch_count = 0
     
+    # Print model and device information
+    print(f"Model parameters:")
+    total_params = sum(p.numel() for p in model.parameters())
+    trainable_params = sum(p.numel() for p in model.parameters() if p.requires_grad)
+    print(f"Total parameters: {total_params:,}")
+    print(f"Trainable parameters: {trainable_params:,}")
+    print(f"Using device: {device}")
+
     # Progress bar for training
     progress_bar = tqdm(train_loader, desc="Training", leave=False)
     
-    for batch in progress_bar:
-        # Move batch to device
-        frames = batch['frames'].to(device)
-        mel_spec = batch['mel_spectrogram'].to(device)
-        audio_lengths = batch['audio_length'].to(device)
-        frame_times = batch['frame_times'].to(device)
-        
-        # Zero the parameter gradients
-        optimizer.zero_grad()
-        
-        # Forward pass
-        combined_features = model(
-            frames,
-            mel_spec,
-            audio_lengths,
-            frame_times
-        )
-        
-        # Compute loss (you'll need to define an appropriate loss function)
-        # This is a placeholder - replace with your specific loss computation
-        loss = criterion(combined_features, combined_features)  # Placeholder
-        
-        # Backward pass and optimize
-        loss.backward()
-        optimizer.step()
-        
-        # Update metrics
-        total_loss += loss.item()
-        batch_count += 1
-        
-        # Update progress bar
-        progress_bar.set_postfix({'loss': loss.item()})
-    
+    for batch_idx, batch in enumerate(progress_bar):
+        # Diagnostic print for batch sizes and types
+        print(f"\nBatch {batch_idx}:")
+        print(f"Frames shape: {batch['frames'].shape}")
+        print(f"Mel spectrogram shape: {batch['mel_spectrogram'].shape}")
+        print(f"Audio lengths shape: {batch['audio_length'].shape}")
+        print(f"Frame times shape: {batch['frame_times'].shape}")
+
+        # Memory diagnostics before processing
+        print("\nMemory before processing:")
+        print(f"Allocated: {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
+        print(f"Cached: {torch.cuda.memory_reserved(device) / 1e9:.2f} GB")
+
+        try:
+            # Move batch to device
+            frames = batch['frames'].to(device)
+            mel_spec = batch['mel_spectrogram'].to(device)
+            audio_lengths = batch['audio_length'].to(device)
+            frame_times = batch['frame_times'].to(device)
+            
+            # Zero the parameter gradients
+            optimizer.zero_grad()
+            
+            # Forward pass with memory tracking
+            print("\nRunning forward pass...")
+            combined_features = model(
+                frames,
+                mel_spec,
+                audio_lengths,
+                frame_times
+            )
+            
+            # Memory diagnostics after forward pass
+            print("\nMemory after forward pass:")
+            print(f"Allocated: {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
+            print(f"Cached: {torch.cuda.memory_reserved(device) / 1e9:.2f} GB")
+            
+            # Compute loss (you'll need to define an appropriate loss function)
+            loss = criterion(combined_features, combined_features)  # Placeholder
+            
+            # Backward pass and optimize with memory tracking
+            print("\nRunning backward pass...")
+            loss.backward()
+            optimizer.step()
+            
+            # Memory diagnostics after backward pass
+            print("\nMemory after backward pass:")
+            print(f"Allocated: {torch.cuda.memory_allocated(device) / 1e9:.2f} GB")
+            print(f"Cached: {torch.cuda.memory_reserved(device) / 1e9:.2f} GB")
+            
+            # Update metrics
+            total_loss += loss.item()
+            batch_count += 1
+            
+            # Update progress bar
+            progress_bar.set_postfix({'loss': loss.item()})
+
+            # Explicitly clear memory
+            del frames, mel_spec, audio_lengths, frame_times, combined_features, loss
+            torch.cuda.empty_cache()
+            gc.collect()
+
+        except RuntimeError as e:
+            print(f"Error processing batch {batch_idx}: {e}")
+            # Clear CUDA memory
+            torch.cuda.empty_cache()
+            gc.collect()
+            raise  # Re-raise to stop training if there's a critical error
+
     # Compute average loss
     avg_loss = total_loss / batch_count if batch_count > 0 else 0
     
