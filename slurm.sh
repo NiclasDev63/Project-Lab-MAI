@@ -11,7 +11,7 @@
 #SBATCH -p kurs00079
 #SBATCH --reservation=kurs00079
 # GPU specification
-#SBATCH --gres=gpu:a100:1 # 1 GPU
+#SBATCH --gres=gpu:v100:1 # 1 GPU
 
 module load gcc/8 python/3.9
 cd /work/scratch/kurse/kurs00079/data/vox2/
