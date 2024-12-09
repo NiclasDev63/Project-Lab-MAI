@@ -1,3 +1,4 @@
+.env
 *.pyc
 .vscode
 *.ckpt
@@ -11,4 +12,4 @@ result
 AdaFace/scripts/run_debug*
 AdaFace/pretrained/*
 __pycache__
-datasets/Training_VoxCeleb2
+datasets/*

@@ -1,4 +1,5 @@
 import argparse
+import os
 import uuid
 
 import matplotlib.pyplot as plt
@@ -6,8 +7,15 @@ import torch
 import wandb
 from AdaFace.inference import load_pretrained_model
 from data_loader.vox_celeb2.VoxCeleb2Ada import create_voxceleb2_adaface_dataloader
+from dotenv import load_dotenv
 from loss_function import intra_modal_consistency_loss
 from tqdm import tqdm
+
+load_dotenv()
+
+WANDB_API_KEY = os.getenv("WANDB_API_KEY")
+
+wandb.login(key=WANDB_API_KEY)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_root", type=str)

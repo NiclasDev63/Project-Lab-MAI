@@ -137,7 +137,7 @@ class VoxCeleb2Ada(Dataset):
         frame_size: Tuple[int, int] = (112, 112),
         split: Literal["train", "val"] = "train",
     ):
-        self.split = split
+        self.split = "dev" if split == "train" else "val"
         self.data_dir = os.path.join(data_root, self.split)
         self.train_dict = create_train_dict(self.data_dir)
         self.speaker_id_to_idx = speaker_id_to_idx(self.train_dict)
