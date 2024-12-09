@@ -53,6 +53,8 @@ class TemporalAlignmentModule(nn.Module):
             closest_idx = torch.argmin(distances)
             frame_indices.append(closest_idx)
 
+        print(aligned_audio.shape)
+        print(frame_indices)
         # Get corresponding audio features
         aligned_audio = audio_features[frame_indices]
 
