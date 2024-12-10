@@ -1,8 +1,8 @@
 #!/bin/bash
 #SBATCH -J hello_world
 # Please check paths (directories have to exist beforehand):
-#SBATCH -e /home/ng33rete/test/test.err
-#SBATCH -o /home/ng33rete/test/test.out
+#SBATCH -e /work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/test.err
+#SBATCH -o /work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/test.out
 #
 # CPU specification
 #SBATCH -n 1 # 1 process
@@ -33,4 +33,3 @@ EXITCODE=$?
 # end this job script with precisely the exit status of your scientific program
 above:
 exit $EXITCODE
-

@@ -11,15 +11,6 @@ import torch
 import torchaudio
 import torchvision
 import torchvision.transforms as transforms
-from AdaFace.face_alignment import align
-
-# from transformers import AutoImageProcessor
-from data_loader.vox_celeb2.video_transforms import (
-    NormalizeVideo,
-    ResizeVideo,
-    SquareVideo,
-    ToTensorVideo,
-)
 from einops import rearrange
 
 # from pytorch_lightning import LightningDataModule
@@ -33,6 +24,16 @@ from torchvision.io import write_video
 from torchvision.transforms import functional as F
 from torchvision.transforms import v2 as T
 from torchvision.transforms.functional import InterpolationMode
+
+from AdaFace.face_alignment import align
+
+# from transformers import AutoImageProcessor
+from data_loader.vox_celeb2.video_transforms import (
+    NormalizeVideo,
+    ResizeVideo,
+    SquareVideo,
+    ToTensorVideo,
+)
 
 MAX_VIDEO_LENGTH_IN_SECONDS = 20
 FRAME_RATE = 25
@@ -137,7 +138,7 @@ class VoxCeleb2Ada(Dataset):
         frame_size: Tuple[int, int] = (112, 112),
         split: Literal["train", "val"] = "train",
     ):
-        self.split = "dev" if split == "train" else "val"
+        self.split = "dev" if split == "train" else "test"
         self.data_dir = os.path.join(data_root, self.split)
         self.train_dict = create_train_dict(self.data_dir)
         self.speaker_id_to_idx = speaker_id_to_idx(self.train_dict)

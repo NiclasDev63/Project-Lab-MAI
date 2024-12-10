@@ -5,11 +5,12 @@ import uuid
 import matplotlib.pyplot as plt
 import torch
 import wandb
+from dotenv import load_dotenv
+from tqdm import tqdm
+
 from AdaFace.inference import load_pretrained_model
 from data_loader.vox_celeb2.VoxCeleb2Ada import create_voxceleb2_adaface_dataloader
-from dotenv import load_dotenv
 from loss_function import intra_modal_consistency_loss
-from tqdm import tqdm
 
 load_dotenv()
 
