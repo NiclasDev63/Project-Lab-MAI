@@ -4,8 +4,8 @@
 #
 # CPU specification
 #SBATCH -n 1 # 1 process
-#SBATCH -c 4 # 4 CPU cores per process
-#SBATCH --mem-per-cpu=3800 # Hauptspeicher in MByte pro Rechenkern
+#SBATCH -c 8 # 4 CPU cores per process
+#SBATCH --mem-per-cpu=4500 # Hauptspeicher in MByte pro Rechenkern
 #SBATCH -t 23:59:59 # in hours:minutes, or '#SBATCH -t 10' - just minutes
 #SBATCH -A kurs00079
 #SBATCH -p kurs00079

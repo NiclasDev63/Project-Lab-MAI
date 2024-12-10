@@ -79,7 +79,7 @@ class MultiModalFeatureExtractor(nn.Module):
         self.adaface = adaface.to(self.device)
         self.adaface.train()
         # Initialize Whisper for audio features
-        self.whisper = whisper.load_model("large-v3").to(self.device)
+        self.whisper = whisper.load_model("turbo").to(self.device)
         self.audio_encoder = self.whisper.encoder
         del self.whisper.decoder
 

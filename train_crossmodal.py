@@ -213,7 +213,7 @@ def main():
         frames_per_clip=25,
         frame_size=(112, 112),
         max_audio_length=30,
-        goal_fps=2
+        goal_fps=1
     )
     
     
