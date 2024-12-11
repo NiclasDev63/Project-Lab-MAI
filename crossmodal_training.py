@@ -77,9 +77,9 @@ class MultiModalFeatureExtractor(nn.Module):
         # Memory tracking function
         def log_memory_usage(message=""):
             if torch.cuda.is_available():
-                allocated = torch.cuda.memory_allocated(self.device) / 1024 / 1024  # Convert to MB
-                reserved = torch.cuda.memory_reserved(self.device) / 1024 / 1024  # Convert to MB
-                print(f"{message} - Allocated: {allocated:.2f} MB, Reserved: {reserved:.2f} MB")
+                allocated = torch.cuda.memory_allocated(self.device) / 1024 / 1024 / 1024  # Convert to GB
+                reserved = torch.cuda.memory_reserved(self.device) / 1024 / 1024 / 1024  # Convert to GB
+                print(f"{message} - Allocated: {allocated:.2f} GB, Reserved: {reserved:.2f} GB")
                 torch.cuda.reset_peak_memory_stats(self.device)
 
         # Log initial memory
