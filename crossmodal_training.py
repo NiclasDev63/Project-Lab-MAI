@@ -74,14 +74,28 @@ class MultiModalFeatureExtractor(nn.Module):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+        # Memory tracking function
+        def log_memory_usage(message=""):
+            if torch.cuda.is_available():
+                allocated = torch.cuda.memory_allocated(self.device) / 1024 / 1024  # Convert to MB
+                reserved = torch.cuda.memory_reserved(self.device) / 1024 / 1024  # Convert to MB
+                print(f"{message} - Allocated: {allocated:.2f} MB, Reserved: {reserved:.2f} MB")
+                torch.cuda.reset_peak_memory_stats(self.device)
+
+        # Log initial memory
+        log_memory_usage("Initial Memory")
+
         # Initialize AdaFace for visual features
         adaface = load_pretrained_model("ir_50")
         self.adaface = adaface.to(self.device)
         self.adaface.train()
+        log_memory_usage("After AdaFace Loading")
+
         # Initialize Whisper for audio features
         self.whisper = whisper.load_model("turbo").to(self.device)
         self.audio_encoder = self.whisper.encoder
         del self.whisper.decoder
+        log_memory_usage("After Whisper Loading")
 
         # Transformer encoder for temporal aggregation of visual features
         encoder_layers = TransformerEncoderLayer(
@@ -93,160 +107,95 @@ class MultiModalFeatureExtractor(nn.Module):
         self.visual_transformer = TransformerEncoder(
             encoder_layers, num_layers=num_encoder_layers
         ).to(self.device)
+        log_memory_usage("After Transformer Loading")
 
-    def process_frames(self, frames,original_lengths):
+        # Store memory logging function
+        self.log_memory_usage = log_memory_usage
+
+    def process_frames(self, frames, original_lengths):
         """
         Process individual frames through AdaFace and transformer
-
-        Args:
-            frames: tensor of shape (batch_size, num_frames, 3, 112, 112)
         """
-        # How do we use batches with movies of differing lengths ????? 
+        self.log_memory_usage("Before Frame Processing")
+
         batch_size, num_frames, channels, height, width = frames.shape
-        frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)  # Shape: (batch_size * num_frames, 3, 112, 112)
+        frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)
         
+        # Manage memory for image processing
         pil_images = [Image.fromarray(frame.permute(1, 2, 0).byte().cpu().numpy()) for frame in frames_reshaped]
-        aligned_pil_images = [align.get_aligned_face("",rgb_pil_image=img) for img in pil_images]
-        aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])  # Convert and stack tensors
-        aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])  # Reshape back
+        del frames_reshaped  # Free up memory
+        
+        aligned_pil_images = [align.get_aligned_face("", rgb_pil_image=img) for img in pil_images]
+        del pil_images  # Free up memory
+        
+        aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])
+        del aligned_pil_images  # Free up memory
+        
+        aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])
+        self.log_memory_usage("After Image Alignment")
 
         frame_features = []
-        
         
         # Process each frame individually through AdaFace
         for i in range(num_frames):
             self.adaface.train()
-            frame = frames[:, i]  # (batch_size, 3, 112, 112)
+            frame = frames[:, i]
             frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
             
             frame_features.append(features)
+            
+            # Periodically check memory
+            if i % 10 == 0:
+                self.log_memory_usage(f"During Frame Processing - Frame {i}")
 
         # Stack frame features
-        frame_features = torch.stack(
-            frame_features, dim=1
-        )  # (batch_size, num_frames, 512)
+        frame_features = torch.stack(frame_features, dim=1)
+        self.log_memory_usage("After Frame Feature Extraction")
 
         # Process through transformer
         transformed_features = self.visual_transformer(frame_features)
+        self.log_memory_usage("After Visual Transformer")
+
         return transformed_features
 
     def process_audio(self, mel_features, original_lengths):
         """
         Process audio through Whisper encoder and extract relevant features
-
-        Args:
-            mel_features: tensor of shape (batch_size, n_mels, time) - already padded using whisper.pad_or_trim
-            original_lengths: tensor of shape (batch_size,) containing original audio lengths before padding
         """
+        self.log_memory_usage("Before Audio Processing")
+
         # Process through Whisper encoder
-        audio_features = self.audio_encoder(mel_features)  # (batch_size, time, 1280)
+        audio_features = self.audio_encoder(mel_features)
+        self.log_memory_usage("After Whisper Audio Encoding")
 
         # Extract only the relevant features based on original lengths
         extracted_features = []
         for features, length in zip(audio_features, original_lengths):
-            # Convert audio length to feature length (accounting for any downsampling in Whisper)
+            # Convert audio length to feature length
             feature_length = length // self.whisper.dims.n_audio_ctx
             # Extract only the valid features
             valid_features = features[:feature_length]
             extracted_features.append(valid_features)
 
+        self.log_memory_usage("After Audio Feature Extraction")
         return extracted_features
-
-    def align_and_combine(
-        self, visual_features, audio_features, frame_timestamps, audio_timestamps
-    ):
-        """
-        Align and combine visual and audio features
-
-        Args:
-            visual_features: tensor of shape (num_frames, 512)
-            audio_features: tensor of shape (audio_time, 1280)
-            frame_timestamps: tensor of shape (num_frames,)
-            audio_timestamps: tensor of shape (audio_time,)
-        """
-        # For each frame timestamp, find the closest audio timestamp
-        frame_indices = []
-        for frame_time in frame_timestamps:
-            distances = torch.abs(audio_timestamps - frame_time)
-            closest_idx = torch.argmin(distances).item()
-            frame_indices.append(closest_idx)
-
-
-        # Get corresponding audio features and concatenate
-        aligned_audio = audio_features[frame_indices]
-        combined_features = torch.cat(
-            [visual_features, aligned_audio], dim=-1
-        )  # (num_frames, 1792)
-        return combined_features
-
-    # TODO: test this
-    def align_and_combine_interpolate(
-        self, visual_features, audio_features, frame_timestamps, audio_timestamps
-    ):
-        """
-        Align and combine visual and audio features using interpolation.
-
-        Args:
-            visual_features: tensor of shape (num_frames, 512)
-            audio_features: tensor of shape (audio_time, 1280)
-            frame_timestamps: tensor of shape (num_frames,)
-            audio_timestamps: tensor of shape (audio_time,)
-        """
-        # Interpolate audio features for frame timestamps
-        interpolated_audio = []
-        for frame_time in frame_timestamps:
-            # Find indices for interpolation
-            lower_idx = torch.searchsorted(
-                audio_timestamps, frame_time, right=False
-            ).clamp(max=len(audio_timestamps) - 1)
-            upper_idx = lower_idx + 1
-            lower_idx = lower_idx.clamp(max=audio_timestamps.size(0) - 1)
-
-            if upper_idx >= audio_timestamps.size(0):
-                # If the frame_time is beyond the last audio timestamp, use the last audio feature
-                interpolated_audio.append(audio_features[-1])
-            else:
-                # Linear interpolation
-                t1, t2 = audio_timestamps[lower_idx], audio_timestamps[upper_idx]
-                f1, f2 = audio_features[lower_idx], audio_features[upper_idx]
-                weight = (frame_time - t1) / (t2 - t1 + 1e-8)  # Avoid division by zero
-                interpolated_audio.append((1 - weight) * f1 + weight * f2)
-
-        interpolated_audio = torch.stack(
-            interpolated_audio, dim=0
-        )  # (num_frames, 1280)
-
-        # Concatenate visual and interpolated audio features
-        combined_features = torch.cat(
-            [visual_features, interpolated_audio], dim=-1
-        )  # (num_frames, 1792)
-        return combined_features
 
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
         Forward pass processing full audio and individual frames
-
-        Args:
-            frames: tensor of shape (batch_size, num_frames, 3, 112, 112)
-            mel_features: tensor of shape (batch_size, n_mels, time) - already padded using whisper.pad_or_trim
-            original_lengths: tensor of shape (batch_size,) containing original audio lengths
-            frame_timestamps: tensor of shape (batch_size, num_frames) containing frame timestamps
         """
-        batch_size = frames.shape[0]
+        self.log_memory_usage("Start of Forward Pass")
 
-        print("frames shape: ", frames.shape)
-        print("mel_features shape: ", mel_features.shape)
-        print("original_lengths shape: ", original_lengths.shape)
-        print("frame_timestamps shape: ", frame_timestamps.shape)
+        batch_size = frames.shape[0]
 
         # Process all frames through AdaFace and transformer
         visual_features = self.process_frames(frames, original_lengths)
-        print("visual_features shape: ", visual_features[0].shape)
+        self.log_memory_usage("After Visual Feature Processing")
 
         # Process full audio through Whisper and get relevant features
         audio_features = self.process_audio(mel_features, original_lengths)
-        print("audio_features shape: ", audio_features[0].shape)
+        self.log_memory_usage("After Audio Feature Processing")
 
         # Align and combine features for each sequence in the batch
         combined_features = []
@@ -268,10 +217,15 @@ class MultiModalFeatureExtractor(nn.Module):
             )
             combined_features.append(seq_combined)
 
+            # Periodically check memory
+            if i % 5 == 0:
+                self.log_memory_usage(f"During Combine Features - Sequence {i}")
+
         # Stack combined features
         combined_features = torch.stack(combined_features, dim=0)
-        return combined_features
+        self.log_memory_usage("End of Forward Pass")
 
+        return combined_features
 
 class VoxCeleb2Dataset(Dataset):
     def __init__(
