@@ -155,6 +155,12 @@ def validate_model(model, val_loader, criterion, device):
             total_loss += loss.item()
             batch_count += 1
             
+            # additional cleanup.
+            while len(combined_features) > 0:
+                del combined_features[0]
+                
+            del combined_features
+            
             # Update progress bar
             progress_bar.set_postfix({'val_loss': loss.item()})
     
@@ -204,7 +210,7 @@ def main():
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     
     dataset_path = Path(r"/work/scratch/kurse/kurs00079/data/vox2")
-    
+    dataset_path = Path(r"D:\dataset")
     train_loader = create_voxceleb2_dataloader(
         root_dir=dataset_path,
         batch_size=config["batch_size"],

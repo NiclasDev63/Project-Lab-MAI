@@ -139,7 +139,7 @@ class MultiModalFeatureExtractor(nn.Module):
         # Process each frame individually through AdaFace
         for i in range(batch_size):
             self.adaface.train()
-            frame = frames[0]
+            frame = frames[i]
             frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
             
@@ -147,10 +147,7 @@ class MultiModalFeatureExtractor(nn.Module):
             
             # Periodically check memory
             if i % 10 == 0:
-                self.log_memory_usage(f"During Frame Processing - Frame {i} Pre delete")
-                del frame
-                del frames[0]
-                self.log_memory_usage(f"During Frame Processing - Frame {i} Post delete")
+                self.log_memory_usage(f"During Frame Processing - Frame {i}")
 
         # Stack frame features
         frame_features = torch.stack(frame_features, dim=1)
@@ -219,10 +216,12 @@ class MultiModalFeatureExtractor(nn.Module):
 
         # Process all frames through AdaFace and transformer
         visual_features = self.process_frames(frames, original_lengths)
+        del frames
         self.log_memory_usage("After Visual Feature Processing")
 
         # Process full audio through Whisper and get relevant features
         audio_features = self.process_audio(mel_features, original_lengths)
+        del mel_features
         self.log_memory_usage("After Audio Feature Processing")
 
         # Align and combine features for each sequence in the batch
