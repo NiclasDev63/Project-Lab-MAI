@@ -180,7 +180,32 @@ class MultiModalFeatureExtractor(nn.Module):
 
         self.log_memory_usage("After Audio Feature Extraction")
         return extracted_features
+    def align_and_combine(
+        self, visual_features, audio_features, frame_timestamps, audio_timestamps
+    ):
+        """
+        Align and combine visual and audio features
 
+        Args:
+            visual_features: tensor of shape (num_frames, 512)
+            audio_features: tensor of shape (audio_time, 1280)
+            frame_timestamps: tensor of shape (num_frames,)
+            audio_timestamps: tensor of shape (audio_time,)
+        """
+        # For each frame timestamp, find the closest audio timestamp
+        frame_indices = []
+        for frame_time in frame_timestamps:
+            distances = torch.abs(audio_timestamps - frame_time)
+            closest_idx = torch.argmin(distances).item()
+            frame_indices.append(closest_idx)
+
+
+        # Get corresponding audio features and concatenate
+        aligned_audio = audio_features[frame_indices]
+        combined_features = torch.cat(
+            [visual_features, aligned_audio], dim=-1
+        )  # (num_frames, 1792)
+        return combined_features
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
         Forward pass processing full audio and individual frames
