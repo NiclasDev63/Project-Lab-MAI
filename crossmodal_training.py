@@ -135,22 +135,38 @@ class MultiModalFeatureExtractor(nn.Module):
         self.log_memory_usage("After Image Alignment")
 
         frame_features = []
-        
-        # Process each frame individually through AdaFace
-        for i in range(num_frames):
-            self.adaface.train()
-            frame = frames[:, i]
-            frame = frame.contiguous()
-            features = self.adaface(frame)[0]  # Get identity features
+
+        # Process frames in chunks of at most 25
+        for start in range(0, num_frames, 25):
+            # Determine the end index for this chunk
+            end = min(start + 25, num_frames)
             
-            frame_features.append(features)
+            # Extract the current chunk of frames
+            chunk_frames = frames[:, start:end]
+            chunk_features = []
+            
+            # Process each frame in the current chunk
+            for i in range(chunk_frames.shape[1]):
+                self.adaface.train()
+                frame = chunk_frames[:, i]
+                frame = frame.contiguous()
+                features = self.adaface(frame)[0]  # Get identity features
+                
+                chunk_features.append(features)
+            
+            # Stack chunk features
+            chunk_features = torch.stack(chunk_features, dim=1)
+            frame_features.append(chunk_features)
+            
+            # Explicitly delete chunk-related variables to help free memory
+            del chunk_frames, chunk_features
+            torch.cuda.empty_cache()
             
             # Periodically check memory
-            if i % 10 == 0:
-                self.log_memory_usage(f"During Frame Processing - Frame {i}")
+            self.log_memory_usage(f"After Processing Chunk {start} to {end}")
 
-        # Stack frame features
-        frame_features = torch.stack(frame_features, dim=1)
+        # Stack all frame features
+        frame_features = torch.cat(frame_features, dim=1)
         self.log_memory_usage("After Frame Feature Extraction")
 
         # Process through transformer
