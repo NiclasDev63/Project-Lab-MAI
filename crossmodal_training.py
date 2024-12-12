@@ -92,7 +92,7 @@ class MultiModalFeatureExtractor(nn.Module):
         log_memory_usage("After AdaFace Loading")
 
         # Initialize Whisper for audio features
-        self.whisper = whisper.load_model("large-v3").to(self.device)
+        self.whisper = whisper.load_model("turbo").to(self.device)
         self.audio_encoder = self.whisper.encoder
         del self.whisper.decoder
         log_memory_usage("After Whisper Loading")
@@ -137,9 +137,9 @@ class MultiModalFeatureExtractor(nn.Module):
         frame_features = []
         
         # Process each frame individually through AdaFace
-        for i in range(batch_size):
+        for i in range(num_frames):
             self.adaface.train()
-            frame = frames[i]
+            frame = frames[:,i]
             frame = frame.contiguous()
             features = self.adaface(frame)[0]  # Get identity features
             
