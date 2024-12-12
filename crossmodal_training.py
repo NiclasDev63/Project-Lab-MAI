@@ -205,6 +205,9 @@ class MultiModalFeatureExtractor(nn.Module):
         combined_features = torch.cat(
             [visual_features, aligned_audio], dim=-1
         )  # (num_frames, 1792)
+        del visual_features
+        del aligned_audio
+        del audio_features
         return combined_features
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
@@ -242,8 +245,9 @@ class MultiModalFeatureExtractor(nn.Module):
             seq_combined = self.align_and_combine(
                 seq_visual, seq_audio, seq_timestamps, audio_timestamps
             )
+            del seq_visual, seq_audio, seq_timestamps, audio_timestamps
             combined_features.append(seq_combined)
-
+            del seq_combined
             # Periodically check memory
             if i % 5 == 0:
                 self.log_memory_usage(f"During Combine Features - Sequence {i}")
