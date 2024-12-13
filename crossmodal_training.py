@@ -4,63 +4,17 @@ from PIL import Image
 
 import torch
 import torch.nn as nn
-import torchaudio
 import torchvision.transforms as transforms
 import whisper
 from torch.nn import TransformerEncoder, TransformerEncoderLayer
 from torch.utils.data import DataLoader, Dataset
 from torchvision.io import read_video, read_video_timestamps
-from torchvision.transforms.functional import InterpolationMode
 
 from AdaFace.face_alignment import align
 from AdaFace.inference import load_pretrained_model, to_input
 from data_loader.vox_celeb2.video_transforms import (
     NormalizeVideo,
-    ResizeVideo,
-    SquareVideo,
-    ToTensorVideo,
 )
-
-
-class TemporalAlignmentModule(nn.Module):
-    """
-    Module to align and combine frame-level visual features with corresponding audio features
-    """
-
-    def __init__(self):
-        super().__init__()
-
-    def forward(
-        self, visual_features, audio_features, audio_timestamps, frame_timestamps
-    ):
-        """
-        Aligns visual and audio features based on timestamps and concatenates them
-
-        Args:
-            visual_features: tensor of shape (num_frames, 512) - from AdaFace
-            audio_features: tensor of shape (audio_time, 1280) - from Whisper
-            audio_timestamps: tensor of shape (audio_time,) in seconds
-            frame_timestamps: tensor of shape (num_frames,) in seconds
-
-        Returns:
-            combined_features: tensor of shape (num_frames, 1792)  # 512 + 1280
-        """
-        # For each frame timestamp, find the closest audio timestamp
-        frame_indices = []
-        for frame_time in frame_timestamps:
-            # Find closest audio timestamp
-            distances = torch.abs(audio_timestamps - frame_time)
-            closest_idx = torch.argmin(distances)
-            frame_indices.append(closest_idx)
-
-        # Get corresponding audio features
-        aligned_audio = audio_features[frame_indices]
-
-        # Simply concatenate visual and aligned audio features
-        combined_features = torch.cat(
-            [visual_features, aligned_audio], dim=-1
-        )  # Shape: (num_frames, 1792)
-        return combined_features
 
 
 class MultiModalFeatureExtractor(nn.Module):
@@ -119,19 +73,7 @@ class MultiModalFeatureExtractor(nn.Module):
         self.log_memory_usage("Before Frame Processing")
 
         batch_size, num_frames, channels, height, width = frames.shape
-        #frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)
-        
-        # Manage memory for image processing
-        #pil_images = [Image.fromarray(frame.permute(1, 2, 0).byte().cpu().numpy()) for frame in frames_reshaped]
-        #del frames_reshaped  # Free up memory
-        
-        #aligned_pil_images = [align.get_aligned_face("", rgb_pil_image=img) for img in pil_images]
-        #del pil_images  # Free up memory
-        
-        #aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])
-        #del aligned_pil_images  # Free up memory
-        
-        #aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])
+
         self.log_memory_usage("After Image Alignment")
 
         frame_features = []
@@ -194,9 +136,6 @@ class MultiModalFeatureExtractor(nn.Module):
         combined_features = torch.cat(
             [visual_features, aligned_audio], dim=-1
         )  # (num_frames, 1792)
-        del visual_features
-        del aligned_audio
-        del audio_features
         return combined_features
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
@@ -208,12 +147,10 @@ class MultiModalFeatureExtractor(nn.Module):
 
         # Process all frames through AdaFace and transformer
         visual_features = self.process_frames(frames, original_lengths)
-        del frames
         self.log_memory_usage("After Visual Feature Processing")
 
         # Process full audio through Whisper and get relevant features
         audio_features = self.process_audio(mel_features, original_lengths)
-        del mel_features
         self.log_memory_usage("After Audio Feature Processing")
 
         # Align and combine features for each sequence in the batch
@@ -234,9 +171,7 @@ class MultiModalFeatureExtractor(nn.Module):
             seq_combined = self.align_and_combine(
                 seq_visual, seq_audio, seq_timestamps, audio_timestamps
             )
-            del seq_visual, seq_audio, seq_timestamps, audio_timestamps
             combined_features.append(seq_combined)
-            del seq_combined
             # Periodically check memory
             if i % 5 == 0:
                 self.log_memory_usage(f"During Combine Features - Sequence {i}")
@@ -252,12 +187,13 @@ class VoxCeleb2Dataset(Dataset):
         self,
         root_dir,
         split="train",
-        frame_size=(112, 112),
+        frame_size=(224, 224),
         max_video_length=30,  # Fixed maximum video length in seconds
         max_audio_length=30,  # Maximum audio length in seconds for Whisper
         goal_fps=None,  # Optional frame rate reduction
         n_mels=128,
-        train_list_path="datasets/test/train_list.txt"
+        train_list_path="datasets/test/train_list.txt",
+        max_videos = 100000
     ):
         super().__init__()
         self.root_dir = Path(root_dir)
@@ -279,18 +215,25 @@ class VoxCeleb2Dataset(Dataset):
 
                 if identity not in self.videos_by_identity:
                     self.videos_by_identity[identity] = []
+                    if len(self.video_paths) < max_videos:
+                        self.video_paths.append(video_path)
                 self.videos_by_identity[identity].append(video_path)
-                self.video_paths.append(video_path)
 
+
+        for i in range(1,30):
+           for videos in self.videos_by_identity.values():
+               if len(self.video_paths) >= max_videos: 
+                   break
+               if len (videos) > i:
+                   self.video_paths.append(videos[i])
+            
+            
+            
         # Initialize Whisper processor for mel spectrograms
         self.whisper_processor = whisper.log_mel_spectrogram
         
         self.video_transforms = transforms.Compose(
             [
-                SquareVideo(),
-                # Removed due to frame processing needing rgb convert rgb to bgr as described in AdaFace github repo
-                ResizeVideo(frame_size, InterpolationMode.BILINEAR),
-                ToTensorVideo(max_pixel_value=255.0),
                 # Use mean and std as described in AdaFace github repo
                 NormalizeVideo(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             ]
@@ -299,8 +242,7 @@ class VoxCeleb2Dataset(Dataset):
     def _process_frame(self, frame):
         """Convert frame to PIL, align face, and transform to input tensor."""
         pil_image = Image.fromarray(frame.numpy().transpose(1, 2, 0).astype(np.uint8))  # Convert to PIL format
-        #aligned_rgb_img = align.get_aligned_face(image_path=None, rgb_pil_image=pil_image)
-        aligned_rgb_img = pil_image
+        aligned_rgb_img = align.get_aligned_face(image_path=None, rgb_pil_image=pil_image)
         bgr_input = to_input(aligned_rgb_img)
         bgr_input = bgr_input.squeeze(0)
         return bgr_input
@@ -324,10 +266,15 @@ class VoxCeleb2Dataset(Dataset):
         if frames.size(0) > total_frames:
             frames = frames[:total_frames]
             pts = pts[:total_frames]
-        frames = self.video_transforms(frames) 
         # Convert frames to PIL, process, and return tensor
-        processed_frames = torch.stack([self._process_frame(frame) for frame in frames])
-
+        try:
+            processed_frames = torch.stack([self._process_frame(frame) for frame in frames])
+            processed_frames = self.video_transforms(processed_frames) 
+            valid = True
+        except Exception as e:
+            processed_frames =  torch.zeros((len(frames),3,112,112))
+            valid = False
+        
 
         # Pad with black frames if needed
         padding_frames = total_frames - processed_frames.size(0)
@@ -347,8 +294,10 @@ class VoxCeleb2Dataset(Dataset):
 
             # Concatenate the padded pts with the additional_pts
                 pts = torch.cat([torch.tensor(pts), additional_pts_tensor])
+        else:
+            pts = torch.tensor(pts)
 
-        return processed_frames, audio, info, pts
+        return processed_frames, audio, info, pts, valid
 
     def __len__(self):
         return len(self.video_paths)
@@ -357,7 +306,9 @@ class VoxCeleb2Dataset(Dataset):
         video_path = self.video_paths[idx]
 
         # Load frames, audio, and metadata
-        frames, audio, info, pts = self._load_video_frames(video_path)
+
+        frames, audio, info, pts, valid = self._load_video_frames(video_path)
+
 
 
 
@@ -371,19 +322,21 @@ class VoxCeleb2Dataset(Dataset):
             "audio_length": audio_len,  # scalar
             "video_path": str(video_path),  # for debugging
             "frame_times": pts,  # Timestamp of the frames (padded)
+            "valid": valid,
         }
 
 
 def create_voxceleb2_dataloader(
     root_dir,
     batch_size=8,
-    num_workers=4,
+    num_workers=0,
     split="train",
     frame_size=(112, 112),
     max_video_length=30,
     max_audio_length=30,
     goal_fps=None,
     n_mels=128,
+    max_videos = 100000
 ):
     """
     Create a DataLoader for the VoxCeleb2 dataset
@@ -396,6 +349,7 @@ def create_voxceleb2_dataloader(
         max_audio_length=max_audio_length,
         goal_fps=goal_fps,
         n_mels=n_mels,
+        max_videos = max_videos
     )
 
     dataloader = DataLoader(
@@ -404,7 +358,7 @@ def create_voxceleb2_dataloader(
         shuffle=(split == "train"),
         num_workers=num_workers,
         pin_memory=True,
-        drop_last=True
+        drop_last=True,
     )
 
     return dataloader
