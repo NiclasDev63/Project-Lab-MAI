@@ -59,7 +59,7 @@ def cross_modal_consistency_loss(visual_features, audio_features, temperature):
     audio_features = F.normalize(audio_features, p=2, dim=-1)
 
     # Compute similarity tensor
-    similarity_matrix = torch.einsum("ntd,nqd->ntq", visual_features, audio_features)
+    similarity_matrix = torch.einsum("ntd,nqe->ntq", visual_features, audio_features)
 
     # Extract similarity scores between audio and video
     diagonal_scores = torch.diagonal(similarity_matrix, dim1=1, dim2=2).permute(1, 0)
@@ -68,11 +68,11 @@ def cross_modal_consistency_loss(visual_features, audio_features, temperature):
     # compute loss terms for similarity in both directions
     t1 = -torch.log(
         torch.exp(diagonal_scores / temperature)
-        / torch.sum(torch.exp(similarity_matrix_exp), dim=-1)
+        / torch.sum(torch.exp(similarity_matrix_exp), dim=-1).transpose(0,1)
     )
     t2 = -torch.log(
         torch.exp(diagonal_scores / temperature)
-        / torch.sum(torch.exp(similarity_matrix_exp.transpose(1, 2)), dim=-1)
+        / torch.sum(torch.exp(similarity_matrix_exp.transpose(1, 2)), dim=-1).transpose(0,1)
     )
 
     # added terms and average

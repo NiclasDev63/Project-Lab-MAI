@@ -9,6 +9,7 @@ import uuid
 import time
 import gc
 import os
+from loss_function import cross_modal_consistency_loss
 os.environ["KMP_DUPLICATE_LIB_OK"] = "TRUE"
 
 from crossmodal_training import (
@@ -117,7 +118,7 @@ def train_epoch(model: MultiModalFeatureExtractor, train_loader, criterion, opti
                 memory_tracker.log_memory('after_zero_grad', device)
                 
                 # Forward pass
-                combined_features = model(
+                visual_features, audio_feautres = model(
                     frames,
                     mel_spec,
                     audio_lengths,
@@ -125,8 +126,8 @@ def train_epoch(model: MultiModalFeatureExtractor, train_loader, criterion, opti
                 )
                 memory_tracker.log_memory('after_forward_pass', device)
                 
-                # Compute loss (placeholder)
-                loss = criterion(combined_features, combined_features)  
+                # Compute loss (real)
+                loss = criterion(visual_features, audio_feautres,0.7)  
                 
                 # Backward pass and optimize
                 loss.backward()
@@ -209,7 +210,7 @@ def main():
         dim_feedforward=config["dim_feedforward"]
     ).to(device)
     
-    criterion = nn.MSELoss() 
+    criterion = cross_modal_consistency_loss 
     optimizer = optim.Adam(model.parameters(), lr=1e-4)
     
     dataset_path = Path(r"/work/scratch/kurse/kurs00079/data/vox2")
@@ -222,7 +223,8 @@ def main():
         max_video_length=25,
         frame_size=(112, 112),
         max_audio_length=30,
-        goal_fps=25
+        goal_fps=25,
+        max_videos= 10000
     )
     
     # Training loop

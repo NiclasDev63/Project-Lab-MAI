@@ -20,10 +20,10 @@ from data_loader.vox_celeb2.video_transforms import (
 class MultiModalFeatureExtractor(nn.Module):
     def __init__(
         self,
-        d_model=512,
+        d_model=1280,
         nhead=8,
         num_encoder_layers=6,
-        dim_feedforward=2048,
+        dim_feedforward=5120,
     ):
         super().__init__()
         self.device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -133,10 +133,8 @@ class MultiModalFeatureExtractor(nn.Module):
 
         # Get corresponding audio features and concatenate
         aligned_audio = audio_features[frame_indices]
-        combined_features = torch.cat(
-            [visual_features, aligned_audio], dim=-1
-        )  # (num_frames, 1792)
-        return combined_features
+        
+        return visual_features, aligned_audio
     def forward(self, frames, mel_features, original_lengths, frame_timestamps):
         """
         Forward pass processing full audio and individual frames
@@ -154,7 +152,8 @@ class MultiModalFeatureExtractor(nn.Module):
         self.log_memory_usage("After Audio Feature Processing")
 
         # Align and combine features for each sequence in the batch
-        combined_features = []
+        visual_features_out = []
+        audio_features_out = []
         for i in range(batch_size):
             # Get features for current sequence
             seq_visual = visual_features[i]
@@ -168,19 +167,21 @@ class MultiModalFeatureExtractor(nn.Module):
             )
 
             # Align and combine features
-            seq_combined = self.align_and_combine(
+            seq_visual_out, seq_audio_out = self.align_and_combine(
                 seq_visual, seq_audio, seq_timestamps, audio_timestamps
             )
-            combined_features.append(seq_combined)
+            visual_features_out.append(seq_visual_out)
+            audio_features_out.append(seq_audio_out)
             # Periodically check memory
             if i % 5 == 0:
                 self.log_memory_usage(f"During Combine Features - Sequence {i}")
 
         # Stack combined features
-        combined_features = torch.stack(combined_features, dim=0)
+        visual_features_out = torch.stack(visual_features_out, dim=0)
+        audio_features_out = torch.stack(audio_features_out, dim=0)
         self.log_memory_usage("End of Forward Pass")
 
-        return combined_features
+        return visual_features_out, audio_features_out
 
 class VoxCeleb2Dataset(Dataset):
     def __init__(
