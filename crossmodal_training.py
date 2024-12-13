@@ -1,4 +1,4 @@
-import os
+import numpy as np
 from pathlib import Path
 from PIL import Image
 
@@ -119,38 +119,27 @@ class MultiModalFeatureExtractor(nn.Module):
         self.log_memory_usage("Before Frame Processing")
 
         batch_size, num_frames, channels, height, width = frames.shape
-        frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)
+        #frames_reshaped = frames.view(batch_size * num_frames, channels, height, width)
         
         # Manage memory for image processing
-        pil_images = [Image.fromarray(frame.permute(1, 2, 0).byte().cpu().numpy()) for frame in frames_reshaped]
-        del frames_reshaped  # Free up memory
+        #pil_images = [Image.fromarray(frame.permute(1, 2, 0).byte().cpu().numpy()) for frame in frames_reshaped]
+        #del frames_reshaped  # Free up memory
         
-        aligned_pil_images = [align.get_aligned_face("", rgb_pil_image=img) for img in pil_images]
-        del pil_images  # Free up memory
+        #aligned_pil_images = [align.get_aligned_face("", rgb_pil_image=img) for img in pil_images]
+        #del pil_images  # Free up memory
         
-        aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])
-        del aligned_pil_images  # Free up memory
+        #aligned_frames = torch.stack([to_input(img) for img in aligned_pil_images])
+        #del aligned_pil_images  # Free up memory
         
-        aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])
+        #aligned_frames = aligned_frames.view(batch_size, num_frames, *aligned_frames.shape[1:])
         self.log_memory_usage("After Image Alignment")
 
         frame_features = []
+        frames_reshaped = torch.reshape(frames,[batch_size * num_frames, channels, height, width]).contiguous()
         
-        # Process each frame individually through AdaFace
-        for i in range(num_frames):
-            self.adaface.train()
-            frame = frames[:,i]
-            frame = frame.contiguous()
-            features = self.adaface(frame)[0]  # Get identity features
-            
-            frame_features.append(features)
-            
-            # Periodically check memory
-            if i % 10 == 0:
-                self.log_memory_usage(f"During Frame Processing - Frame {i}")
+        features = self.adaface(frames_reshaped)[0] 
+        frame_features = features.view(batch_size, num_frames, -1)
 
-        # Stack frame features
-        frame_features = torch.stack(frame_features, dim=1)
         self.log_memory_usage("After Frame Feature Extraction")
 
         # Process through transformer
@@ -173,7 +162,7 @@ class MultiModalFeatureExtractor(nn.Module):
         extracted_features = []
         for features, length in zip(audio_features, original_lengths):
             # Convert audio length to feature length
-            feature_length = length // self.whisper.dims.n_audio_ctx
+            feature_length = int((length / 30) * self.whisper.dims.n_audio_ctx)
             # Extract only the valid features
             valid_features = features[:feature_length]
             extracted_features.append(valid_features)
@@ -263,29 +252,16 @@ class VoxCeleb2Dataset(Dataset):
         self,
         root_dir,
         split="train",
-        frames_per_clip=25,
         frame_size=(112, 112),
-        max_video_length=10,  # Maximum video length in seconds
+        max_video_length=30,  # Fixed maximum video length in seconds
         max_audio_length=30,  # Maximum audio length in seconds for Whisper
         goal_fps=None,  # Optional frame rate reduction
         n_mels=128,
         train_list_path="datasets/test/train_list.txt"
     ):
-        """
-        Args:
-            root_dir: Path to VoxCeleb2 dataset root
-            split: 'train' or 'test'
-            frames_per_clip: Maximum number of frames to sample
-            frame_size: Size to resize frames to (height, width)
-            max_video_length: Maximum video length in seconds for frames
-            max_audio_length: Maximum audio length in seconds (for Whisper)
-            goal_fps: Optional target frame rate to reduce video frames
-            n_mels: Number of mel spectrogram bins
-        """
         super().__init__()
         self.root_dir = Path(root_dir)
         self.split = "dev" if split == "train" else "test"
-        self.frames_per_clip = frames_per_clip
         self.frame_size = frame_size
         self.max_video_length = max_video_length
         self.max_audio_length = max_audio_length
@@ -293,62 +269,45 @@ class VoxCeleb2Dataset(Dataset):
         self.n_mels = n_mels
 
         # Load video paths
-        
         self.video_paths = []
         self.videos_by_identity = {}
         with open(train_list_path, 'r') as f:
             for line in f:
-                # Assuming the format is: identity video_path
                 parts = line.strip().split()
                 identity = parts[0]
                 video_path = self.root_dir / "dev" / Path("mp4") / (parts[1][:-3] + "mp4")
-                
+
                 if identity not in self.videos_by_identity:
                     self.videos_by_identity[identity] = []
                 self.videos_by_identity[identity].append(video_path)
                 self.video_paths.append(video_path)
+
+        # Initialize Whisper processor for mel spectrograms
+        self.whisper_processor = whisper.log_mel_spectrogram
         
-        # self.video_paths = []
-        # split_dir = self.root_dir / self.split
-        
-        # for person_id in os.listdir(split_dir):
-        #     person_dir = split_dir / person_id
-        #     if not person_dir.is_dir():
-        #         continue
-
-        #     for video_id in os.listdir(person_dir):
-        #         video_dir = person_dir / video_id
-        #         if not video_dir.is_dir():
-        #             continue
-
-        #         for video_file in video_dir.glob("*.mp4"):
-        #             self.video_paths.append(video_file)
-
-        # Video transforms from marcels file
         self.video_transforms = transforms.Compose(
             [
                 SquareVideo(),
-                # removed due to frame processing needing rgb convert rgb to bgr as described in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
-                #transforms.Lambda(lambda x: x[:, [2, 1, 0], :, :]),
+                # Removed due to frame processing needing rgb convert rgb to bgr as described in AdaFace github repo
                 ResizeVideo(frame_size, InterpolationMode.BILINEAR),
                 ToTensorVideo(max_pixel_value=255.0),
-                # use mean and std as describe in AdaFace github repo see: https://github.com/mk-minchul/AdaFace?tab=readme-ov-file#general-inference-guideline
+                # Use mean and std as described in AdaFace github repo
                 NormalizeVideo(mean=[0.5, 0.5, 0.5], std=[0.5, 0.5, 0.5]),
             ]
         )
 
-        # Initialize Whisper processor for mel spectrograms
-        self.whisper_processor = whisper.log_mel_spectrogram
+    def _process_frame(self, frame):
+        """Convert frame to PIL, align face, and transform to input tensor."""
+        pil_image = Image.fromarray(frame.numpy().transpose(1, 2, 0).astype(np.uint8))  # Convert to PIL format
+        #aligned_rgb_img = align.get_aligned_face(image_path=None, rgb_pil_image=pil_image)
+        aligned_rgb_img = pil_image
+        bgr_input = to_input(aligned_rgb_img)
+        bgr_input = bgr_input.squeeze(0)
+        return bgr_input
 
     def _load_video_frames(self, video_path):
-        """Load and process video frames with optional frame rate reduction"""
-        # Get video timestamps first
+        """Load and process video frames with optional frame rate reduction."""
         pts, fps = read_video_timestamps(str(video_path))
-        
-        # Convert pts to tensor
-        pts_tensor = torch.tensor(pts)
-
-        # Read video 
         frames, audio, info = read_video(
             str(video_path),
             output_format="TCHW",  # Returns frames in format (time, channels, height, width)
@@ -356,22 +315,40 @@ class VoxCeleb2Dataset(Dataset):
 
         # Optional frame rate reduction
         if self.goal_fps and self.goal_fps < info['video_fps']:
-            # Calculate frame skip interval
             skip_interval = max(1, int(round(info['video_fps'] / self.goal_fps)))
             frames = frames[::skip_interval]
-            pts_tensor = pts_tensor[::skip_interval]
+            pts = pts[::skip_interval]  # Make sure to adjust the timestamps accordingly
 
-        # Trim or pad frames to max_video_length
-        max_frames = int(self.max_video_length * info['video_fps'])
-        if frames.size(0) > max_frames:
-            frames = frames[:max_frames]
-            pts_tensor = pts_tensor[:max_frames]
-        
-        # Apply video transforms
-        frames = self.video_transforms(frames)
-        frame_times = pts_tensor
-        
-        return frames, frame_times, audio, info
+        total_frames = int(self.max_video_length * (self.goal_fps or info['video_fps']))
+        #trim 
+        if frames.size(0) > total_frames:
+            frames = frames[:total_frames]
+            pts = pts[:total_frames]
+        frames = self.video_transforms(frames) 
+        # Convert frames to PIL, process, and return tensor
+        processed_frames = torch.stack([self._process_frame(frame) for frame in frames])
+
+
+        # Pad with black frames if needed
+        padding_frames = total_frames - processed_frames.size(0)
+        if padding_frames > 0:
+            black_frame = torch.zeros_like(processed_frames[0])
+            processed_frames = torch.cat(
+                [processed_frames, black_frame.repeat(padding_frames, 1, 1, 1)],
+                dim=0
+            )
+
+            # Pad pts (timestamps) to match the number of frames
+            if len(pts) > 1:
+                interval = pts[1] - pts[0]  # Calculate the interval between timestamps
+                last_pt = pts[-1]  # Get the last timestamp
+                additional_pts = [last_pt + interval * (i + 1) for i in range(padding_frames)]
+                additional_pts_tensor = torch.tensor(additional_pts)
+
+            # Concatenate the padded pts with the additional_pts
+                pts = torch.cat([torch.tensor(pts), additional_pts_tensor])
+
+        return processed_frames, audio, info, pts
 
     def __len__(self):
         return len(self.video_paths)
@@ -380,29 +357,20 @@ class VoxCeleb2Dataset(Dataset):
         video_path = self.video_paths[idx]
 
         # Load frames, audio, and metadata
-        frames, frame_times, audio, info = self._load_video_frames(video_path)
+        frames, audio, info, pts = self._load_video_frames(video_path)
 
-        # Process audio
-        # Convert to mono if stereo
-        if audio.size(0) > 1:
-            audio = torch.mean(audio, dim=1, keepdim=True)
 
-        # Resample to 16kHz if needed (Whisper's expected sample rate)
-        if info["audio_fps"] != 16000:
-            resampler = torchaudio.transforms.Resample(info["audio_fps"], 16000)
-            audio = resampler(audio.t()).t()
 
-        # Convert to mel spectrogram and pad (or trim) using Whisper's processor
-        mel = self.whisper_processor(
-            audio.squeeze(1).numpy(), n_mels=self.n_mels
-        ).squeeze(0)
-
+        audio_len =audio.size(1)/16000    
+        audio = whisper.pad_or_trim(audio)
+        mel = self.whisper_processor(audio.squeeze(1).numpy(), n_mels=self.n_mels).squeeze(0)
+          # Use Whisper's method to pad or trim
         return {
-            "frames": frames,  # shape: (frames_per_clip, 3, H, W)
+            "frames": frames,  # shape: (total_frames, 3, H, W)
             "mel_spectrogram": mel,  # shape: (1, n_mels, T)
-            "audio_length": audio.size(1),  # scalar
-            "frame_times": frame_times,  # shape: (frames_per_clip,)
+            "audio_length": audio_len,  # scalar
             "video_path": str(video_path),  # for debugging
+            "frame_times": pts,  # Timestamp of the frames (padded)
         }
 
 
@@ -411,9 +379,8 @@ def create_voxceleb2_dataloader(
     batch_size=8,
     num_workers=4,
     split="train",
-    frames_per_clip=16,
     frame_size=(112, 112),
-    max_video_length=10,
+    max_video_length=30,
     max_audio_length=30,
     goal_fps=None,
     n_mels=128,
@@ -424,7 +391,6 @@ def create_voxceleb2_dataloader(
     dataset = VoxCeleb2Dataset(
         root_dir=root_dir,
         split=split,
-        frames_per_clip=frames_per_clip,
         frame_size=frame_size,
         max_video_length=max_video_length,
         max_audio_length=max_audio_length,
@@ -438,73 +404,7 @@ def create_voxceleb2_dataloader(
         shuffle=(split == "train"),
         num_workers=num_workers,
         pin_memory=True,
-        drop_last=True,
-        collate_fn=custom_collate_fn,
+        drop_last=True
     )
 
     return dataloader
-
-
-def custom_collate_fn(batch):
-    """
-    Custom collate function to pad:
-    - mel spectrograms to a fixed length (3000)
-    - frames and frame_times with -1 for variable length sequences
-    Custom collate function to pad:
-    - mel spectrograms to a fixed length (3000)
-    - frames and frame_times with -1 for variable length sequences
-    """
-    FIXED_LENGTH = 3000
-
-    # Separate each item in the batch
-    frames = [item["frames"] for item in batch]
-    mel_spectrograms = [torch.tensor(item["mel_spectrogram"]) for item in batch]
-    audio_lengths = [item["audio_length"] for item in batch]
-    frame_times = [item["frame_times"] for item in batch]
-    video_paths = [item["video_path"] for item in batch]
-
-    # Find maximum sequence length for frames
-    max_frames_length = max(f.size(0) for f in frames)
-    
-    # Pad frames with -1
-    padded_frames = []
-    for frame_seq in frames:
-        padding_length = max_frames_length - frame_seq.size(0)
-        if padding_length > 0:
-            # Create padding tensor with same spatial dimensions as frames
-            padding = torch.full(
-                (padding_length, frame_seq.size(1), frame_seq.size(2), frame_seq.size(3)),
-                -1.0,
-                dtype=frame_seq.dtype
-            )
-            padded_frames.append(torch.cat([frame_seq, padding], dim=0))
-        else:
-            padded_frames.append(frame_seq)
-    
-    # Pad frame_times with -1
-    padded_frame_times = []
-    for time_seq in frame_times:
-        padding_length = max_frames_length - time_seq.size(0)
-        if padding_length > 0:
-            padding = torch.full((padding_length,), -1.0, dtype=time_seq.dtype)
-            padded_frame_times.append(torch.cat([time_seq, padding], dim=0))
-        else:
-            padded_frame_times.append(time_seq)
-
-    # Stack all tensors
-    frames = torch.stack(padded_frames)
-    frame_times = torch.stack(padded_frame_times)
-    audio_lengths = torch.tensor(audio_lengths)
-    
-    # Pad mel spectrograms to the fixed length (3000)
-    padded_mels = [torch.nn.functional.pad(mel, (0, FIXED_LENGTH - mel.shape[-1])) for mel in mel_spectrograms]
-    mel_spectrograms = torch.stack(padded_mels)
-
-    return {
-        "frames": frames,  # shape: (batch_size, max_seq_length, C, H, W)
-        "mel_spectrogram": mel_spectrograms,
-        "audio_length": audio_lengths,
-        "frame_times": frame_times,  # shape: (batch_size, max_seq_length)
-        "video_path": video_paths,
-    }
-
