@@ -393,7 +393,7 @@ def test_model_with_auc(
             )
 
             # Compute loss
-            loss = criterion(visual_features, audio_features, 0.7)
+            loss = criterion(visual_features, audio_features, 0.7, reduction='none')
             
             # Store results
             all_losses.append(loss.cpu().item())

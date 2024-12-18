@@ -43,7 +43,7 @@ def intra_modal_consistency_loss(identity_features, temperature=1):
 
 
 # TODO not tested yet
-def cross_modal_consistency_loss(visual_features, audio_features, temperature):
+def cross_modal_consistency_loss(visual_features, audio_features, temperature, reduction='mean'):
     """
     Calculates cross modal consistency loss.
 
@@ -75,7 +75,14 @@ def cross_modal_consistency_loss(visual_features, audio_features, temperature):
         / torch.sum(torch.exp(similarity_matrix_exp.transpose(1, 2)), dim=-1).transpose(0,1)
     )
 
-    # added terms and average
-    loss = (t1 + t2).mean()
+    # added terms
+    loss = (t1 + t2)
 
-    return loss
+    if reduction == 'mean':
+        return loss.mean()
+    elif reduction == 'sum':
+        return loss.sum()
+    elif reduction == 'none':
+        return loss
+    else:
+        raise ValueError(f"Invalid reduction mode: {reduction}")
