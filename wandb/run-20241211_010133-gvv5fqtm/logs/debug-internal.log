@@ -1,0 +1,16 @@
+{"time":"2024-12-11T01:01:33.24598449+01:00","level":"INFO","msg":"using version","core version":"0.19.0"}
+{"time":"2024-12-11T01:01:33.24606234+01:00","level":"INFO","msg":"created symlink","path":"/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241211_010133-gvv5fqtm/logs/debug-core.log"}
+{"time":"2024-12-11T01:01:33.3633463+01:00","level":"INFO","msg":"created new stream","id":"gvv5fqtm"}
+{"time":"2024-12-11T01:01:33.363425768+01:00","level":"INFO","msg":"stream: started","id":"gvv5fqtm"}
+{"time":"2024-12-11T01:01:33.363479496+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T01:01:33.363553853+01:00","level":"INFO","msg":"handler: started","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T01:01:33.363496888+01:00","level":"INFO","msg":"sender: started","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T01:01:33.633402893+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-12-11T04:24:36.934837787+01:00","level":"INFO","msg":"stream: closing","id":"gvv5fqtm"}
+{"time":"2024-12-11T04:24:36.935050974+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-12-11T04:24:36.936394788+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-12-11T04:24:37.930130317+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-12-11T04:24:38.103798793+01:00","level":"INFO","msg":"handler: closed","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T04:24:38.103834801+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T04:24:38.103918489+01:00","level":"INFO","msg":"sender: closed","stream_id":"gvv5fqtm"}
+{"time":"2024-12-11T04:24:38.104478932+01:00","level":"INFO","msg":"stream: closed","id":"gvv5fqtm"}

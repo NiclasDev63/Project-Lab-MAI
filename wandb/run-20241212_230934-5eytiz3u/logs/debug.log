@@ -1,0 +1,23 @@
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_setup.py:_flush():68] Current SDK version is 0.19.0
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_setup.py:_flush():68] Configure stats pid to 1582676
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_setup.py:_flush():68] Loading settings from /home/kurse/kurs00079/ng33rete/.config/wandb/settings
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_setup.py:_flush():68] Loading settings from /work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/settings
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_setup.py:_flush():68] Loading settings from environment variables
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_init.py:_log_setup():528] Logging user logs to /work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241212_230934-5eytiz3u/logs/debug.log
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_init.py:_log_setup():529] Logging internal logs to /work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241212_230934-5eytiz3u/logs/debug-internal.log
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_init.py:init():639] calling init triggers
+2024-12-12 23:09:34,963 INFO    MainThread:1582676 [wandb_init.py:init():645] wandb.init called with sweep_config: {}
+config: {'experiment_name': 'intra-modal-consistency-loss-v1', 'run_name': 'intra-modal-consistency-loss-v1-fd393a16', 'epochs': 30, 'batch_size': 8, 'learning_rate': 0.001}
+2024-12-12 23:09:34,964 INFO    MainThread:1582676 [wandb_init.py:init():688] starting backend
+2024-12-12 23:09:34,964 INFO    MainThread:1582676 [wandb_init.py:init():692] sending inform_init request
+2024-12-12 23:09:34,975 INFO    MainThread:1582676 [backend.py:_multiprocessing_setup():104] multiprocessing start_methods=fork,spawn,forkserver, using: spawn
+2024-12-12 23:09:34,975 INFO    MainThread:1582676 [wandb_init.py:init():705] backend started and connected
+2024-12-12 23:09:34,978 INFO    MainThread:1582676 [wandb_init.py:init():798] updated telemetry
+2024-12-12 23:09:34,997 INFO    MainThread:1582676 [wandb_init.py:init():830] communicating run to backend with 90.0 second timeout
+2024-12-12 23:09:35,379 INFO    MainThread:1582676 [wandb_init.py:init():882] starting run threads in backend
+2024-12-12 23:09:35,591 INFO    MainThread:1582676 [wandb_run.py:_console_start():2443] atexit reg
+2024-12-12 23:09:35,591 INFO    MainThread:1582676 [wandb_run.py:_redirect():2293] redirect: wrap_raw
+2024-12-12 23:09:35,591 INFO    MainThread:1582676 [wandb_run.py:_redirect():2358] Wrapping output streams.
+2024-12-12 23:09:35,591 INFO    MainThread:1582676 [wandb_run.py:_redirect():2383] Redirects installed.
+2024-12-12 23:09:35,600 INFO    MainThread:1582676 [wandb_init.py:init():925] run started, returning control to user process
+2024-12-13 08:47:31,926 WARNING MsgRouterThr:1582676 [router.py:message_loop():75] message_loop has been closed

@@ -1,0 +1,36 @@
+Starting training...
+Traceback (most recent call last):                
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 239, in <module>
+    wandb.log({"training_loss_plot": wandb.Image("training_loss_plot.png")})
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 177, in main
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 67, in train_epoch
+    # Zero the parameter gradients
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 34, in _extract_features_for_identity
+    identity_features = model(batch_frames)[0]
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/net.py", line 352, in forward
+    x = module(x)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/net.py", line 171, in forward
+    res = self.res_layer(x)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/container.py", line 250, in forward
+    input = module(input)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1736, in _wrapped_call_impl
+    return self._call_impl(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/module.py", line 1747, in _call_impl
+    return forward_call(*args, **kwargs)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/modules/batchnorm.py", line 193, in forward
+    return F.batch_norm(
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/nn/functional.py", line 2812, in batch_norm
+    return torch.batch_norm(
+torch.OutOfMemoryError: CUDA out of memory. Tried to allocate 96.00 MiB. GPU 0 has a total capacity of 31.73 GiB of which 18.19 MiB is free. Including non-PyTorch memory, this process has 31.71 GiB memory in use. Of the allocated memory 30.64 GiB is allocated by PyTorch, and 724.24 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://pytorch.org/docs/stable/notes/cuda.html#environment-variables)

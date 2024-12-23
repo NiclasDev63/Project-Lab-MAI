@@ -1,26 +1,23 @@
-import argparse
-import os
-import random
-import sys
-from datetime import datetime
-
+import torch.multiprocessing as mp
 from AdaFace.face_alignment import mtcnn
 from PIL import Image
-from tqdm import tqdm
 
-mtcnn_model = mtcnn.MTCNN(device="cuda:0", crop_size=(112, 112))
+# Global variable to hold the model
+mtcnn_model = None
 
 
-def add_padding(pil_img, top, right, bottom, left, color=(0, 0, 0)):
-    width, height = pil_img.size
-    new_width = width + right + left
-    new_height = height + top + bottom
-    result = Image.new(pil_img.mode, (new_width, new_height), color)
-    result.paste(pil_img, (left, top))
-    return result
+def initialize_model(device="cuda:0"):
+    """Initialize the MTCNN model globally"""
+    global mtcnn_model
+    if mtcnn_model is None:
+        mtcnn_model = mtcnn.MTCNN(device=device, crop_size=(112, 112))
 
 
 def get_aligned_face(image_path=None, rgb_pil_image=None):
+    # Initialize model if not already initialized
+    if mtcnn_model is None:
+        initialize_model()
+
     if rgb_pil_image is None:
         img = Image.open(image_path).convert("RGB")
     else:
@@ -36,5 +33,4 @@ def get_aligned_face(image_path=None, rgb_pil_image=None):
         print("Face detection Failed due to error.")
         print(e)
         face = None
-
     return face

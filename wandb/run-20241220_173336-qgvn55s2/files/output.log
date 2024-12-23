@@ -1,0 +1,46 @@
+Starting training...
+Training:   0%|          | 0/187 [00:00<?, ?it/s]/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+CURRENT MEMORY ALLOCATED:  747501056
+Traceback (most recent call last):                                          
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+CURRENT MEMORY ALLOCATED:  746518016
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1243, in _try_get_data
+    data = self._data_queue.get(timeout=timeout)
+  File "/shared/apps/.gcc/8.5/python/3.10.10/lib/python3.10/queue.py", line 180, in get
+    self.not_empty.wait(remaining)
+  File "/shared/apps/.gcc/8.5/python/3.10.10/lib/python3.10/threading.py", line 324, in wait
+    gotit = waiter.acquire(True, timeout)
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/_utils/signal_handling.py", line 73, in handler
+    _error_if_any_worker_fails()
+RuntimeError: DataLoader worker (pid 1014659) is killed by signal: Killed.
+
+The above exception was the direct cause of the following exception:
+
+Traceback (most recent call last):
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 294, in <module>
+    main()
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 216, in main
+    train_metrics = train_epoch(model, train_loader, optimizer, device, criterion)
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 76, in train_epoch
+    for batch in progress_bar:
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/tqdm/std.py", line 1181, in __iter__
+    for obj in iterable:
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 701, in __next__
+    data = self._next_data()
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1448, in _next_data
+    idx, data = self._get_data()
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1402, in _get_data
+    success, data = self._try_get_data()
+  File "/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/utils/data/dataloader.py", line 1256, in _try_get_data
+    raise RuntimeError(
+RuntimeError: DataLoader worker (pid(s) 1014659) exited unexpectedly

@@ -1,0 +1,16 @@
+{"time":"2024-12-20T17:24:46.115499227+01:00","level":"INFO","msg":"using version","core version":"0.19.0"}
+{"time":"2024-12-20T17:24:46.11558313+01:00","level":"INFO","msg":"created symlink","path":"/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241220_172446-jima9474/logs/debug-core.log"}
+{"time":"2024-12-20T17:24:46.236942403+01:00","level":"INFO","msg":"created new stream","id":"jima9474"}
+{"time":"2024-12-20T17:24:46.237016221+01:00","level":"INFO","msg":"stream: started","id":"jima9474"}
+{"time":"2024-12-20T17:24:46.237116514+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:46.237192842+01:00","level":"INFO","msg":"handler: started","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:46.237126123+01:00","level":"INFO","msg":"sender: started","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:46.484624257+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-12-20T17:24:46.733888201+01:00","level":"INFO","msg":"stream: closing","id":"jima9474"}
+{"time":"2024-12-20T17:24:46.734151333+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-12-20T17:24:46.734643385+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-12-20T17:24:47.802652147+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-12-20T17:24:47.984059261+01:00","level":"INFO","msg":"handler: closed","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:47.984086823+01:00","level":"INFO","msg":"sender: closed","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:47.984093458+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"jima9474"}
+{"time":"2024-12-20T17:24:47.984326014+01:00","level":"INFO","msg":"stream: closed","id":"jima9474"}

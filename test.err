@@ -1,0 +1,45 @@
+Sat Dec 21 20:13:00 2024       
++-----------------------------------------------------------------------------------------+
+| NVIDIA-SMI 555.42.02              Driver Version: 555.42.02      CUDA Version: 12.5     |
+|-----------------------------------------+------------------------+----------------------+
+| GPU  Name                 Persistence-M | Bus-Id          Disp.A | Volatile Uncorr. ECC |
+| Fan  Temp   Perf          Pwr:Usage/Cap |           Memory-Usage | GPU-Util  Compute M. |
+|                                         |                        |               MIG M. |
+|=========================================+========================+======================|
+|   0  Tesla V100-PCIE-32GB           On  |   00000000:D9:00.0 Off |                    0 |
+| N/A   37C    P0             26W /  250W |       1MiB /  32768MiB |      0%      Default |
+|                                         |                        |                  N/A |
++-----------------------------------------+------------------------+----------------------+
+                                                                                         
++-----------------------------------------------------------------------------------------+
+| Processes:                                                                              |
+|  GPU   GI   CI        PID   Type   Process name                              GPU Memory |
+|        ID   ID                                                               Usage      |
+|=========================================================================================|
+|  No running processes found                                                             |
++-----------------------------------------------------------------------------------------+
+Lmod: loading gcc 8.5.0 
+Lmod: loading python 3.10.10 
+wandb: Using wandb-core as the SDK backend.  Please refer to https://wandb.me/wandb-core for more information.
+wandb: Currently logged in as: niclas63 (MAI_LAB). Use `wandb login --relogin` to force relogin
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/inference.py:23: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  model_state_dict = torch.load(adaface_models[architecture])["model_state_dict"]
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/adaface_eval.py:29: FutureWarning: You are using `torch.load` with `weights_only=False` (the current default value), which uses the default pickle module implicitly. It is possible to construct malicious pickle data which will execute arbitrary code during unpickling (See https://github.com/pytorch/pytorch/blob/main/SECURITY.md#untrusted-models for more details). In a future release, the default value for `weights_only` will be flipped to `True`. This limits the functions that could be executed during unpickling. Arbitrary objects will no longer be allowed to be loaded via this mode unless they are explicitly allowlisted by the user via `torch.serialization.add_safe_globals`. We recommend you start setting `weights_only=True` for any use case where you don't have full control of the loaded file. Please open an issue on GitHub for any issues related to this experimental feature.
+  criterion_state_dict = torch.load("./AdaFace/pretrained/checkpoint_epoch_1.pth")["criterion_state_dict"]
+Validation:   0%|          | 0/14 [00:00<?, ?it/s]wandb: Currently logged in as: niclas63 (MAI_LAB). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: niclas63 (MAI_LAB). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: niclas63 (MAI_LAB). Use `wandb login --relogin` to force relogin
+wandb: Currently logged in as: niclas63 (MAI_LAB). Use `wandb login --relogin` to force relogin
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/face_alignment/mtcnn_pytorch/src/matlab_cp2tform.py:90: FutureWarning: `rcond` parameter will change to the default of machine precision times ``max(M, N)`` where M and N are the input matrix dimensions.
+To use the future default and silence this warning we advise to pass `rcond=None`, to keep using the old, explicitly pass `rcond=-1`.
+  r, _, _, _ = lstsq(X, U)
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/face_alignment/mtcnn_pytorch/src/matlab_cp2tform.py:90: FutureWarning: `rcond` parameter will change to the default of machine precision times ``max(M, N)`` where M and N are the input matrix dimensions.
+To use the future default and silence this warning we advise to pass `rcond=None`, to keep using the old, explicitly pass `rcond=-1`.
+  r, _, _, _ = lstsq(X, U)
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/face_alignment/mtcnn_pytorch/src/matlab_cp2tform.py:90: FutureWarning: `rcond` parameter will change to the default of machine precision times ``max(M, N)`` where M and N are the input matrix dimensions.
+To use the future default and silence this warning we advise to pass `rcond=None`, to keep using the old, explicitly pass `rcond=-1`.
+  r, _, _, _ = lstsq(X, U)
+/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/AdaFace/face_alignment/mtcnn_pytorch/src/matlab_cp2tform.py:90: FutureWarning: `rcond` parameter will change to the default of machine precision times ``max(M, N)`` where M and N are the input matrix dimensions.
+To use the future default and silence this warning we advise to pass `rcond=None`, to keep using the old, explicitly pass `rcond=-1`.
+  r, _, _, _ = lstsq(X, U)
+Validation:   0%|          | 0/14 [01:54<?, ?it/s, val_loss=0.936]Validation:   7%|▋         | 1/14 [01:54<24:44, 114.19s/it, val_loss=0.936]Validation:   7%|▋         | 1/14 [02:34<24:44, 114.19s/it, val_loss=1.01] Validation:  14%|█▍        | 2/14 [02:34<14:11, 70.99s/it, val_loss=1.01] Validation:  14%|█▍        | 2/14 [02:35<14:11, 70.99s/it, val_loss=0.92]Validation:  21%|██▏       | 3/14 [02:35<07:06, 38.78s/it, val_loss=0.92]Validation:  21%|██▏       | 3/14 [02:38<07:06, 38.78s/it, val_loss=0.715]Validation:  29%|██▊       | 4/14 [02:38<04:06, 24.63s/it, val_loss=0.715]Validation:  29%|██▊       | 4/14 [04:55<04:06, 24.63s/it, val_loss=0.852]Validation:  36%|███▌      | 5/14 [04:55<09:47, 65.26s/it, val_loss=0.852]Validation:  36%|███▌      | 5/14 [04:55<09:47, 65.26s/it, val_loss=0.877]Validation:  36%|███▌      | 5/14 [04:55<09:47, 65.26s/it, val_loss=0.879]Validation:  50%|█████     | 7/14 [04:55<03:45, 32.17s/it, val_loss=0.879]Validation:  50%|█████     | 7/14 [04:55<03:45, 32.17s/it, val_loss=0.789]Validation:  50%|█████     | 7/14 [06:44<03:45, 32.17s/it, val_loss=0.946]Validation:  64%|██████▍   | 9/14 [06:44<03:27, 41.54s/it, val_loss=0.946]Validation:  64%|██████▍   | 9/14 [06:53<03:27, 41.54s/it, val_loss=0.989]Validation:  71%|███████▏  | 10/14 [06:53<02:16, 34.07s/it, val_loss=0.989]Validation:  71%|███████▏  | 10/14 [07:18<02:16, 34.07s/it, val_loss=0.898]Validation:  79%|███████▊  | 11/14 [07:18<01:35, 31.83s/it, val_loss=0.898]Validation:  79%|███████▊  | 11/14 [07:18<01:35, 31.83s/it, val_loss=0.558]Validation:  79%|███████▊  | 11/14 [07:39<01:35, 31.83s/it, val_loss=0.82] Validation:  93%|█████████▎| 13/14 [07:39<00:22, 22.95s/it, val_loss=0.82]Validation:  93%|█████████▎| 13/14 [07:48<00:22, 22.95s/it, val_loss=0.878]Validation: 100%|██████████| 14/14 [07:48<00:00, 19.72s/it, val_loss=0.878]                                                                           

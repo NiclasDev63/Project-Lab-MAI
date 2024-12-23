@@ -1,6 +1,7 @@
 import argparse
 import os
 import uuid
+import multiprocessing as mp
 
 import matplotlib.pyplot as plt
 import torch
@@ -10,7 +11,7 @@ from tqdm import tqdm
 
 from AdaFace.inference import load_pretrained_model
 from data_loader.vox_celeb2.VoxCeleb2Ada import create_voxceleb2_adaface_dataloader
-from loss_function import intra_modal_consistency_loss
+from loss_function import IntraModalConsistencyLoss
 
 load_dotenv()
 
@@ -20,24 +21,38 @@ wandb.login(key=WANDB_API_KEY)
 
 parser = argparse.ArgumentParser()
 parser.add_argument("--data_root", type=str)
-parser.add_argument("--batch_size", type=int, default=8)
-parser.add_argument("--num_workers", type=int, default=4)
-parser.add_argument("--epochs", type=int, default=10)
-parser.add_argument("--learning_rate", type=float, default=1e-3)
+parser.add_argument("--batch_size", type=int, default=128)
+parser.add_argument("--num_workers", type=int, default=1)
+parser.add_argument("--epochs", type=int, default=100)
+parser.add_argument("--learning_rate", type=float, default=1e-4)
 
 
-def _extract_features_for_identity(model, frames):
-    batch_size = frames.shape[0]
-    frame_features = []
-    for i in range(batch_size):
-        batch_frames = frames[i].contiguous()
-        identity_features = model(batch_frames)[0]
+def _extract_identity_features(model, frames):
+    """
+    Extract features for all identities and their video frames efficiently.
+    
+    Args:
+        model (nn.Module): The feature extractor model.
+        frames (torch.Tensor): A batch of videos, shape (batch_size, num_frames, channels, height, width).
 
-        frame_features.append(identity_features)
-    return torch.stack(frame_features)
+    Returns:
+        torch.Tensor: Extracted features per identity, shape (batch_size, feature_dim).
+    """
+    batch_size, num_frames, channels, height, width = frames.shape
+
+    # Reshape frames to (batch_size * num_frames, channels, height, width)
+    frames = frames.view(batch_size * num_frames, channels, height, width)  
+
+    # Pass all frames through the model at once (parallel processing for each frame)
+    frame_features = model(frames)[0] # Output shape: (batch_size * num_frames, feature_dim)
+
+    # Reshape back to (batch_size, num_frames, feature_dim)
+    identity_features = frame_features.view(batch_size, num_frames, -1)
+
+    return identity_features
 
 
-def train_epoch(model, train_loader, optimizer, device):
+def train_epoch(model, train_loader, optimizer, device, criterion):
     """
     Train the model for one epoch
 
@@ -54,23 +69,28 @@ def train_epoch(model, train_loader, optimizer, device):
     total_loss = 0.0
     batch_count = 0
 
+
     # Progress bar for training
     progress_bar = tqdm(train_loader, desc="Training", leave=False)
 
     for batch in progress_bar:
-        # Move batch to device
-        frames = batch["frames"].to(device)
-
         # Zero the parameter gradients
         optimizer.zero_grad()
+        with torch.autocast(device_type="cuda" if torch.cuda.is_available() else "cpu", dtype=torch.bfloat16):
+            # Move batch to device
+            frames = batch["frames"]
+            frames = frames.to(device)
 
-        frame_features = _extract_features_for_identity(model, frames)
+            frame_features = _extract_identity_features(model, frames)
 
-        loss = intra_modal_consistency_loss(frame_features)
+            loss = criterion(frame_features)
 
         # Backward pass and optimize
         loss.backward()
         optimizer.step()
+
+        mem = torch.cuda.memory_allocated(device)
+        print("CURRENT MEMORY ALLOCATED: ", mem)
 
         # Update metrics
         total_loss += loss.item()
@@ -85,7 +105,7 @@ def train_epoch(model, train_loader, optimizer, device):
     return {"loss": avg_loss}
 
 
-def validate_model(model, val_loader, device):
+def validate_model(model, val_loader, device, criterion):
     """
     Validate the model
 
@@ -106,12 +126,13 @@ def validate_model(model, val_loader, device):
 
     with torch.no_grad():
         for batch in progress_bar:
-            # Move batch to device
-            frames = batch["frames"].to(device)
 
-            frame_features = _extract_features_for_identity(model, frames)
+            frames = batch["frames"]
+            frames = frames.to(device)
 
-            loss = intra_modal_consistency_loss(frame_features)
+            frame_features = _extract_identity_features(model, frames)
+
+            loss = criterion(frame_features)
 
             # Update metrics
             total_loss += loss.item()
@@ -119,6 +140,9 @@ def validate_model(model, val_loader, device):
 
             # Update progress bar
             progress_bar.set_postfix({"val_loss": loss.item()})
+
+            mem = torch.cuda.memory_allocated(device)
+            print("CURRENT MEMORY ALLOCATED: ", mem)
 
     # Compute average loss
     avg_loss = total_loss / batch_count if batch_count > 0 else 0
@@ -145,8 +169,17 @@ def main():
     )
 
     model = load_pretrained_model("ir_50").to(device)
+    model = torch.compile(model)
+    criterion = IntraModalConsistencyLoss()
 
-    optimizer = torch.optim.Adam(model.parameters(), lr=args.learning_rate)
+    optimizer = torch.optim.AdamW(
+        [
+            {"params": model.parameters()},
+            {"params": criterion.parameters()},
+        ],
+        lr=args.learning_rate,
+        weight_decay=2e-1,
+    )
 
     experiment_name = "intra-modal-consistency-loss-v1"
     run_name = f"{experiment_name}-{uuid.uuid4().hex[:8]}"
@@ -174,12 +207,15 @@ def main():
 
     for epoch in range(args.epochs):
 
-        train_metrics = train_epoch(model, train_loader, optimizer, device)
+        train_metrics = train_epoch(model, train_loader, optimizer, device, criterion)
 
-        val_metrics = validate_model(model, val_loader, device)
+        val_metrics = validate_model(model, val_loader, device, criterion)
 
         training_history["train_loss"].append(train_metrics["loss"])
         training_history["val_loss"].append(val_metrics["val_loss"])
+
+
+        current_temperature = criterion.temperature.item()
 
         # Save checkpoint
         checkpoint_path = f"checkpoint_epoch_{epoch+1}.pth"
@@ -188,8 +224,10 @@ def main():
                 "epoch": epoch,
                 "model_state_dict": model.state_dict(),
                 "optimizer_state_dict": optimizer.state_dict(),
+                "criterion_state_dict": criterion.state_dict(),
                 "train_loss": train_metrics["loss"],
                 "val_loss": val_metrics["val_loss"],
+                "temperature": current_temperature
             },
             checkpoint_path,
         )
@@ -202,6 +240,7 @@ def main():
                 "epoch": epoch + 1,
                 "train_loss": train_metrics["loss"],
                 "val_loss": val_metrics["val_loss"],
+                "temperature": current_temperature
             },
         )
         artifact.add_file(checkpoint_path)
@@ -212,12 +251,14 @@ def main():
             {
                 "train_loss": train_metrics["loss"],
                 "val_loss": val_metrics["val_loss"],
+                "temperature": current_temperature
             }
         )
 
         # Print epoch summary
         print(f"Train Loss: {train_metrics['loss']:.4f}")
         print(f"Val Loss: {val_metrics['val_loss']:.4f}")
+        print(f"Temperature: {current_temperature:.4f}")
 
     # Plot training history
     plt.figure(figsize=(10, 5))
@@ -234,6 +275,14 @@ def main():
 
     print("Training completed!")
 
+def set_start_method_spawn():
+   """Safely set the start method to spawn if it hasn't been set yet."""
+   try:
+       if mp.get_start_method(allow_none=True) != 'spawn':
+           mp.set_start_method('spawn')
+   except RuntimeError:
+       pass
 
 if __name__ == "__main__":
+    set_start_method_spawn()
     main()

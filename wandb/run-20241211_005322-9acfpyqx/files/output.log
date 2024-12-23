@@ -1,0 +1,8 @@
+Starting training...
+Training:   0%|          | 0/750 [00:00<?, ?it/s]/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+Training:   0%|          | 2/750 [04:46<25:07:05, 120.89s/it, loss=1.39]

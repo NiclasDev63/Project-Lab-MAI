@@ -1,0 +1,91 @@
+{
+  "os": "Linux-4.18.0-553.22.1.el8_10.x86_64-x86_64-with-glibc2.28",
+  "python": "CPython 3.10.10",
+  "startedAt": "2024-12-12T22:09:34.976121Z",
+  "args": [
+    "--data_root",
+    "../../data/vox2",
+    "--epochs",
+    "30"
+  ],
+  "program": "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py",
+  "codePath": "train_intra_loss.py",
+  "git": {
+    "remote": "https://github.com/NiclasDev63/Project-Lab-MAI.git",
+    "commit": "14607cf6c41a9bb9e621b436c9c1e05c06c5754d"
+  },
+  "email": "niclas.gregor20@gmail.com",
+  "root": "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI",
+  "host": "gvqc0004",
+  "username": "ng33rete",
+  "executable": "/work/scratch/kurse/kurs00079/ng33rete/mai/bin/python",
+  "codePathLocal": "train_intra_loss.py",
+  "cpu_count": 96,
+  "cpu_count_logical": 96,
+  "gpu": "Tesla V100-PCIE-32GB",
+  "gpu_count": 1,
+  "disk": {
+    "/": {
+      "total": "10868711424",
+      "used": "8286162944"
+    }
+  },
+  "memory": {
+    "total": "404310626304"
+  },
+  "cpu": {
+    "count": 96,
+    "countLogical": 96
+  },
+  "gpu_nvidia": [
+    {
+      "name": "Tesla V100-PCIE-32GB",
+      "memoryTotal": "34359738368",
+      "cudaCores": 5120,
+      "architecture": "Volta"
+    }
+  ],
+  "slurm": {
+    "cluster_name": "lcluster",
+    "conf": "/opt/slurm/23.02.7/etc/slurm.conf",
+    "cpus_on_node": "4",
+    "cpus_per_task": "4",
+    "gpus_on_node": "1",
+    "gtids": "0",
+    "job_account": "kurs00079",
+    "job_cpus_per_node": "4",
+    "job_end_time": "1734127625",
+    "job_gid": "604052689",
+    "job_gpus": "2",
+    "job_id": "46870270",
+    "job_name": "hello_world",
+    "job_nodelist": "gvqc0004",
+    "job_num_nodes": "1",
+    "job_partition": "kurs00079",
+    "job_qos": "normal",
+    "job_reservation": "kurs00079",
+    "job_start_time": "1734041225",
+    "job_uid": "604052689",
+    "job_user": "ng33rete",
+    "jobid": "46870270",
+    "localid": "0",
+    "mem_per_cpu": "1750",
+    "nnodes": "1",
+    "node_aliases": "(null)",
+    "nodeid": "0",
+    "nodelist": "gvqc0004",
+    "nprocs": "1",
+    "ntasks": "1",
+    "prio_process": "0",
+    "procid": "0",
+    "script_context": "prolog_task",
+    "submit_dir": "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI",
+    "submit_host": "logc0001",
+    "task_pid": "1582638",
+    "tasks_per_node": "1",
+    "topology_addr": "n01v.gvqc0004",
+    "topology_addr_pattern": "switch.node",
+    "working_cluster": "lcluster:10.32.128.111:6820:9984:109"
+  },
+  "cudaVersion": "12.5"
+}

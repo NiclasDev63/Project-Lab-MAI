@@ -1,0 +1,15 @@
+Starting training...
+Training:   0%|          | 0/749 [00:00<?, ?it/s]/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+/work/scratch/kurse/kurs00079/ng33rete/mai/lib/python3.10/site-packages/torch/_inductor/compile_fx.py:1604: UserWarning: Tesla V100-PCIE-32GB does not support bfloat16 compilation natively, skipping
+  warnings.warn(
+CURRENT MEMORY ALLOCATED:  801928704
+Training:   1%|          | 7/749 [06:46<11:28:46, 55.70s/it, loss=1.11] 
+CURRENT MEMORY ALLOCATED:  800224768
+CURRENT MEMORY ALLOCATED:  799176192
+CURRENT MEMORY ALLOCATED:  799176192
+CURRENT MEMORY ALLOCATED:  799176192
+CURRENT MEMORY ALLOCATED:  799176192
+CURRENT MEMORY ALLOCATED:  799176192

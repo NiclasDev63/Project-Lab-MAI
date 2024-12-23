@@ -1,0 +1,11 @@
+{"time":"2024-12-11T00:51:19.427251009+01:00","level":"INFO","msg":"started logging, with flags","port-filename":"/tmp/tmp6u9fhzbv/port-1787091.txt","pid":1787091,"debug":false,"disable-analytics":false}
+{"time":"2024-12-11T00:51:19.427451381+01:00","level":"INFO","msg":"FeatureState","shutdownOnParentExitEnabled":false}
+{"time":"2024-12-11T00:51:19.427930122+01:00","level":"INFO","msg":"Will exit if parent process dies.","ppid":1787091}
+{"time":"2024-12-11T00:51:19.427852351+01:00","level":"INFO","msg":"server is running","addr":{"IP":"127.0.0.1","Port":34673,"Zone":""}}
+{"time":"2024-12-11T00:51:19.596237925+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:44716"}
+{"time":"2024-12-11T00:53:22.094722585+01:00","level":"INFO","msg":"handleInformInit: received","streamId":"9acfpyqx","id":"127.0.0.1:44716"}
+{"time":"2024-12-11T00:53:22.2159354+01:00","level":"INFO","msg":"handleInformInit: stream started","streamId":"9acfpyqx","id":"127.0.0.1:44716"}
+{"time":"2024-12-11T00:53:31.529086424+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:54908"}
+{"time":"2024-12-11T00:53:40.835607114+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:59190"}
+{"time":"2024-12-11T00:53:50.19747867+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:36366"}
+{"time":"2024-12-11T00:53:59.456034503+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:42760"}

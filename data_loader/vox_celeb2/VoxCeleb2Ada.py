@@ -39,6 +39,9 @@ MAX_VIDEO_LENGTH_IN_SECONDS = 20
 FRAME_RATE = 25
 MAX_FRAMES = MAX_VIDEO_LENGTH_IN_SECONDS * FRAME_RATE
 
+# Target length is only 5 Frames, as mentioned by marcel
+TARGET_LENGTH = 5
+
 
 def _nested_dict():
     """Helper function to create nested defaultdict"""
@@ -139,7 +142,7 @@ class VoxCeleb2Ada(Dataset):
         split: Literal["train", "val"] = "train",
     ):
         self.split = "dev" if split == "train" else "test"
-        self.data_dir = os.path.join(data_root, self.split)
+        self.data_dir = os.path.join(data_root, self.split) if split == "val" else os.path.join(data_root, self.split, "mp4")
         self.train_dict = create_train_dict(self.data_dir)
         self.speaker_id_to_idx = speaker_id_to_idx(self.train_dict)
         self.idx_to_speaker_id = idx_to_speaker_id(self.train_dict)
@@ -162,37 +165,38 @@ class VoxCeleb2Ada(Dataset):
     def _convert_rgb_to_bgr(x: Tensor) -> Tensor:
         return x[:, [2, 1, 0], :, :]
 
-    def _pad_video(
-        self, video: Tensor, target_length: int = MAX_FRAMES, padding_value: int = 0
+    def _pad_video( 
+        self, video: Tensor, target_length: int = TARGET_LENGTH
     ) -> Tensor:
         """
-        Pads a video to have target_length number of frames
+        Pads a video to have target_length number of frames by repeating the last frame
 
         Args:
             video (torch.Tensor): Tensor has shape (num_frames, height, width, channels).
             target_length (int): Desired number of frames.
-            padding_value (int): Value to use for padding.
 
         Returns:
-            torch.Tensor: A tensor of shape (batch_size, target_length, height, width, channels).
+            torch.Tensor: A tensor of shape (target_length, height, width, channels).
         """
         num_frames, height, width, channels = video.shape
-        pad_frames = target_length - num_frames
-        if pad_frames > 0:
-            padding = (
-                0,
-                0,
-                0,
-                0,
-                0,
-                0,
-                pad_frames,
-                0,
-            )  # Padding format for (D, H, W, C)
-            padded_video = nnF.pad(video, padding, value=padding_value)
+        
+        if num_frames >= target_length:
+            # If video is longer or equal to target length, just slice
+            return video[:target_length]
         else:
-            padded_video = video[:target_length]  # Optionally truncate
-
+            # Create a tensor to hold the padded video
+            padded_video = torch.zeros(
+                (target_length, height, width, channels), 
+                dtype=video.dtype, 
+                device=video.device
+            )
+            
+            # Copy original video frames
+            padded_video[:num_frames] = video
+            
+            # Repeat the last frame to fill the remaining slots
+            padded_video[num_frames:] = video[-1]
+        
         return padded_video
 
     def _get_aligned_face(self, frames: Tensor) -> Tensor:
@@ -224,7 +228,8 @@ class VoxCeleb2Ada(Dataset):
 
             aligned_frames.append(aligned_rgb_img)
 
-        return torch.stack(aligned_frames, dim=0)
+
+        return torch.stack(aligned_frames, dim=0) if len(aligned_frames) > 0 else torch.zeros((len(frames) if len(frames) > 0 else TARGET_LENGTH, 112, 112, 3))
 
     def __getitem__(self, index: int) -> dict:
         sample = self._get_random_speaker_sample(index)
@@ -235,9 +240,11 @@ class VoxCeleb2Ada(Dataset):
 
         video, _, _ = read_video(video_path)
         video = self._get_aligned_face(video)
+        video = video.detach()
         video = self._pad_video(video)
         video = rearrange(video, "t h w c -> t c h w")
         video = self.video_transforms(video)
+            
         outputs["frames"] = video
 
         outputs["file_id"] = sample["file_id"]
@@ -278,6 +285,7 @@ def create_voxceleb2_adaface_dataloader(
         shuffle=(split == "train"),
         num_workers=num_workers,
         pin_memory=True,
+        drop_last=True
     )
 
     return dataloader

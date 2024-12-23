@@ -1,0 +1,7 @@
+Starting training...
+Traceback (most recent call last):
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 294, in <module>
+    main()
+  File "/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/train_intra_loss.py", line 216, in main
+    train_metrics = train_epoch(model, train_loader, optimizer, device)
+TypeError: train_epoch() missing 1 required positional argument: 'criterion'

@@ -16,3 +16,4 @@ pynvml
 opencv-python
 einops
 av
+wandb

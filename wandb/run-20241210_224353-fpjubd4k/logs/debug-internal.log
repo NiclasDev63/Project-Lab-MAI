@@ -1,0 +1,16 @@
+{"time":"2024-12-10T22:43:53.373979104+01:00","level":"INFO","msg":"using version","core version":"0.19.0"}
+{"time":"2024-12-10T22:43:53.374043294+01:00","level":"INFO","msg":"created symlink","path":"/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241210_224353-fpjubd4k/logs/debug-core.log"}
+{"time":"2024-12-10T22:43:53.488685029+01:00","level":"INFO","msg":"created new stream","id":"fpjubd4k"}
+{"time":"2024-12-10T22:43:53.488757913+01:00","level":"INFO","msg":"stream: started","id":"fpjubd4k"}
+{"time":"2024-12-10T22:43:53.488875954+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:43:53.488939158+01:00","level":"INFO","msg":"handler: started","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:43:53.488879087+01:00","level":"INFO","msg":"sender: started","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:43:53.770355871+01:00","level":"INFO","msg":"Starting system monitor"}
+{"time":"2024-12-10T22:44:50.306325844+01:00","level":"INFO","msg":"stream: closing","id":"fpjubd4k"}
+{"time":"2024-12-10T22:44:50.306457274+01:00","level":"INFO","msg":"Stopping system monitor"}
+{"time":"2024-12-10T22:44:50.313370363+01:00","level":"INFO","msg":"Stopped system monitor"}
+{"time":"2024-12-10T22:44:50.8978111+01:00","level":"INFO","msg":"fileTransfer: Close: file transfer manager closed"}
+{"time":"2024-12-10T22:44:51.070215365+01:00","level":"INFO","msg":"handler: closed","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:44:51.070252335+01:00","level":"INFO","msg":"sender: closed","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:44:51.070248633+01:00","level":"INFO","msg":"writer: Close: closed","stream_id":"fpjubd4k"}
+{"time":"2024-12-10T22:44:51.07058502+01:00","level":"INFO","msg":"stream: closed","id":"fpjubd4k"}

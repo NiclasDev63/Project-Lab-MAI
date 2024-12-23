@@ -1,0 +1,8 @@
+{"time":"2024-12-20T16:23:53.706661665+01:00","level":"INFO","msg":"started logging, with flags","port-filename":"/tmp/tmpq8wig9hc/port-942008.txt","pid":942008,"debug":false,"disable-analytics":false}
+{"time":"2024-12-20T16:23:53.70684144+01:00","level":"INFO","msg":"FeatureState","shutdownOnParentExitEnabled":false}
+{"time":"2024-12-20T16:23:53.70730564+01:00","level":"INFO","msg":"Will exit if parent process dies.","ppid":942008}
+{"time":"2024-12-20T16:23:53.707228969+01:00","level":"INFO","msg":"server is running","addr":{"IP":"127.0.0.1","Port":39165,"Zone":""}}
+{"time":"2024-12-20T16:23:53.877621573+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:41732"}
+{"time":"2024-12-20T16:25:33.241938494+01:00","level":"INFO","msg":"handleInformInit: received","streamId":"57r9jg8b","id":"127.0.0.1:41732"}
+{"time":"2024-12-20T16:25:33.365249283+01:00","level":"INFO","msg":"handleInformInit: stream started","streamId":"57r9jg8b","id":"127.0.0.1:41732"}
+{"time":"2024-12-20T16:25:42.739078719+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:53002"}
