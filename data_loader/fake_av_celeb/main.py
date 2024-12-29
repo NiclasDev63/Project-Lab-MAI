@@ -40,7 +40,7 @@ FRAME_RATE = 25
 MAX_FRAMES = MAX_VIDEO_LENGTH_IN_SECONDS * FRAME_RATE
 
 # Target length is only 5 Frames, as mentioned by marcel
-TARGET_LENGTH = 5
+TARGET_LENGTH = MAX_FRAMES
 
 
 def create_train_dict(data_root):
@@ -214,6 +214,10 @@ class FakeAVCeleb(Dataset):
         video, _, _ = read_video(video_path)
         video = self._get_aligned_face(video)
         video = video.detach()
+        # I commented out the padding because it should pad the video to desired number of frames
+        # but the target length of the video found was 5 which is not quite correct
+        # if you have a video with 100 frames marcel meant that the video should be devided into windows of 5 frames
+        # therefore I prefer to implement that not in the Dataloader as this is specefic to Intra Modal
         video = self._pad_video(video)
         video = rearrange(video, "t h w c -> t c h w")
         video = self.video_transforms(video)

@@ -3,7 +3,6 @@ import os
 from collections import defaultdict
 
 import torch
-from torcheval.metrics import BinaryAUROC
 from tqdm import tqdm
 
 from AdaFace.face_alignment import align
@@ -40,7 +39,6 @@ def _extract_identity_features(model, frames):
 def validate_model(model, val_loader, device):
     """Validate the model using AUC metric for fake detection"""
     model.eval()
-    auc_metric = BinaryAUROC()
     features_by_identity = defaultdict(list)
 
     # First, collect all features grouped by identity
@@ -81,9 +79,6 @@ def validate_model(model, val_loader, device):
         final_similarities = torch.cat(all_similarities)
         final_labels = torch.cat(all_labels)
 
-        # Compute AUC
-        auc_metric.update(final_similarities, final_labels)
-        auc_score = auc_metric.compute()
     else:
         auc_score = torch.tensor(0.0)
 

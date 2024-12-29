@@ -1,14 +1,12 @@
-import os
-
-import numpy as np
-import torch
-
 import AdaFace.net as net
+import torch
+import os
 from AdaFace.face_alignment import align
+import numpy as np
+
 
 adaface_models = {
-    # "ir_50": "AdaFace/pretrained/adaface_ir50_ms1mv2.ckpt",
-    "ir_50": "AdaFace/pretrained/checkpoint_epoch_1.pth"
+    "ir_50": "AdaFace/pretrained/adaface_ir50_ms1mv2.ckpt",
 }
 
 
@@ -16,13 +14,11 @@ def load_pretrained_model(architecture="ir_50"):
     # load model and pretrained statedict
     assert architecture in adaface_models.keys()
     model = net.build_model(architecture)
-    # statedict = torch.load(adaface_models[architecture])["state_dict"]
-    # model_statedict = {
-    #     key[6:]: val for key, val in statedict.items() if key.startswith("model.")
-    # }
-    model_state_dict = torch.load(adaface_models[architecture])["model_state_dict"]
-    # model.load_state_dict(model_statedict)
-    model.load_state_dict(model_state_dict, strict=False)
+    statedict = torch.load(adaface_models[architecture])["state_dict"]
+    model_statedict = {
+        key[6:]: val for key, val in statedict.items() if key.startswith("model.")
+    }
+    model.load_state_dict(model_statedict)
     model.eval()
     return model
 

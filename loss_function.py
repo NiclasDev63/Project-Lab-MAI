@@ -2,6 +2,7 @@ import torch
 import torch.nn as nn
 import torch.nn.functional as F
 
+
 class IntraModalConsistencyLoss(nn.Module):
     def __init__(self, initial_temperature=0.07):
         """
@@ -33,6 +34,7 @@ class IntraModalConsistencyLoss(nn.Module):
         # As described in the Paper: We then measure the similarity
         # between all pairs of identity vectors ⟨µi(t), µj (q)⟩, where i, j are identity indices
         # and t, q time-window indices, resulting in a T × T × N × N similarity tensor.
+
         identity_features = F.normalize(identity_features, p=2, dim=-1)
         similarities = (
             torch.einsum("itd,jqd->tqij", identity_features, identity_features)
@@ -52,7 +54,6 @@ class IntraModalConsistencyLoss(nn.Module):
 
         loss = loss.sum() / (N * T * T)
         return -loss
-
 
 
 # TODO not tested yet
