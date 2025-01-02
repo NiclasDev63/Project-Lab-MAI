@@ -1,8 +1,0 @@
-{"time":"2024-12-10T23:59:33.784395237+01:00","level":"INFO","msg":"using version","core version":"0.19.0"}
-{"time":"2024-12-10T23:59:33.784458951+01:00","level":"INFO","msg":"created symlink","path":"/work/scratch/kurse/kurs00079/ng33rete/Project-Lab-MAI/wandb/run-20241210_235933-p3ae1x3k/logs/debug-core.log"}
-{"time":"2024-12-10T23:59:33.901178916+01:00","level":"INFO","msg":"created new stream","id":"p3ae1x3k"}
-{"time":"2024-12-10T23:59:33.901255038+01:00","level":"INFO","msg":"stream: started","id":"p3ae1x3k"}
-{"time":"2024-12-10T23:59:33.901377415+01:00","level":"INFO","msg":"writer: Do: started","stream_id":"p3ae1x3k"}
-{"time":"2024-12-10T23:59:33.901434286+01:00","level":"INFO","msg":"sender: started","stream_id":"p3ae1x3k"}
-{"time":"2024-12-10T23:59:33.901438127+01:00","level":"INFO","msg":"handler: started","stream_id":"p3ae1x3k"}
-{"time":"2024-12-10T23:59:34.167493912+01:00","level":"INFO","msg":"Starting system monitor"}

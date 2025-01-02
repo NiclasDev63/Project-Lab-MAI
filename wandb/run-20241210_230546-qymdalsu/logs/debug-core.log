@@ -1,9 +1,0 @@
-{"time":"2024-12-10T23:03:42.231331889+01:00","level":"INFO","msg":"started logging, with flags","port-filename":"/tmp/tmpt1zbge_u/port-1502770.txt","pid":1502770,"debug":false,"disable-analytics":false}
-{"time":"2024-12-10T23:03:42.231571949+01:00","level":"INFO","msg":"FeatureState","shutdownOnParentExitEnabled":false}
-{"time":"2024-12-10T23:03:42.232021358+01:00","level":"INFO","msg":"Will exit if parent process dies.","ppid":1502770}
-{"time":"2024-12-10T23:03:42.231992318+01:00","level":"INFO","msg":"server is running","addr":{"IP":"127.0.0.1","Port":32779,"Zone":""}}
-{"time":"2024-12-10T23:03:42.372630127+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:45916"}
-{"time":"2024-12-10T23:05:46.474871679+01:00","level":"INFO","msg":"handleInformInit: received","streamId":"qymdalsu","id":"127.0.0.1:45916"}
-{"time":"2024-12-10T23:05:46.591864138+01:00","level":"INFO","msg":"handleInformInit: stream started","streamId":"qymdalsu","id":"127.0.0.1:45916"}
-{"time":"2024-12-10T23:05:57.451737223+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:39170"}
-{"time":"2024-12-10T23:06:06.701029642+01:00","level":"INFO","msg":"connection: ManageConnectionData: new connection created","id":"127.0.0.1:54902"}
