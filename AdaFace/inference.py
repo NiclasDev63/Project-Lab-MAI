@@ -13,8 +13,8 @@ import numpy as np
 
 adaface_models = {
     "ir_50": "AdaFace/pretrained/adaface_ir50_ms1mv2.ckpt",
-    "checkpoint_epoch1": "AdaFace\pretrained\checkpoint_epoch_1.pth",
-    "checkpoint_epoch2": "AdaFace\pretrained\checkpoint_epoch_2.pth",
+    "checkpoint_epoch1": "AdaFace/pretrained/checkpoint_epoch_1.pth",
+    "checkpoint_epoch2": "AdaFace/pretrained/checkpoint_epoch_2.pth",
 }
 
 
