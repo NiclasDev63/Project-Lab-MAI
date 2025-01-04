@@ -1,3 +1,4 @@
+import numpy as np
 import torch
 import torch.nn.functional as F
 
@@ -19,14 +20,15 @@ def intra_modal_consistency_loss(identity_features, temperature=0.1):
     """
     N, T, d = identity_features.shape
 
-    # Compute pairwise similarities across time windows and identities
-    # As described in the Paper: We then measure the similarity
-    # between all pairs of identity vectors ⟨µi(t), µj (q)⟩, where i, j are identity indices
-    # and t, q time-window indices, resulting in a T × T × N × N similarity tensor.
-    similarities = (
-        torch.einsum("itd,jqd->tqij", identity_features, identity_features)
-        / temperature
-    )
+        # Compute pairwise similarities across time windows and identities
+        # As described in the Paper: We then measure the similarity
+        # between all pairs of identity vectors ⟨µi(t), µj (q)⟩, where i, j are identity indices
+        # and t, q time-window indices, resulting in a T × T × N × N similarity tensor.
+
+        similarities = (
+            torch.einsum("itd,jqd->tqij", identity_features, identity_features)
+            / self.temperature
+        )
 
     # Take exponentials as per the loss formula
     exp_similarities = torch.exp(similarities)
