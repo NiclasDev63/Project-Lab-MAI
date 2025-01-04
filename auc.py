@@ -6,8 +6,8 @@ from data_loader.fake_av_celeb.main import create_fake_av_celeb_dataloader
 from AdaFace.inference import load_pretrained_model
 
 
-FAKE_SET_PATH = "../../data/FakeAVCeleb/FakeVideo-RealAudio"
-REAL_SET_PATH = "../../data/FakeAVCeleb/RealVideo-RealAudio"
+FAKE_SET_PATH = "../../../../data/FakeAVCeleb/FakeVideo-RealAudio"
+REAL_SET_PATH = "../../../../data/FakeAVCeleb/RealVideo-RealAudio"
 MODEL_PATH = "checkpoint_epoch2"
 
 
