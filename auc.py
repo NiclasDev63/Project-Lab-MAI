@@ -8,7 +8,7 @@ from AdaFace.inference import load_pretrained_model
 
 FAKE_SET_PATH = "../../data/FakeAVCeleb/FakeVideo-RealAudio"
 REAL_SET_PATH = "../../data/FakeAVCeleb/RealVideo-RealAudio"
-MODEL_PATH = ""
+MODEL_PATH = "checkpoint_epoch2"
 
 
 # Function to compute similarity matrix
@@ -70,7 +70,7 @@ def main():
     print(f"Using device: {device}")
 
     # Initialize the model
-    model = load_pretrained_model("checkpoint_epoch2").to(device)
+    model = load_pretrained_model(MODEL_PATH).to(device)
 
     # Initialize scores and labels
     all_scores = []
