@@ -1,63 +1,60 @@
-import numpy as np
 import torch
+import torch.nn as nn
 import torch.nn.functional as F
 
 
-def intra_modal_consistency_loss(identity_features, temperature=0.1):
-    """
-    Calculate the intra-modal consistency loss using raw dot product
+class IntraModalConsistencyLoss(nn.Module):
+    def __init__(self, initial_temperature=0.07):
+        """
+        Intra-modal consistency loss with a trainable temperature parameter.
 
-    Parameters:
-        identity_features (torch.Tensor): Tensor of shape (N, T, d), where
-            - N is the number of identities,
-            - T is the number of frames per identity,
-            - d is the dimensionality of identity feature vectors.
-        temperature (float): Temperature parameter for scaling similarities.
-        I: number of videos in a batch
+        Parameters:
+            initial_temperature (float): Initial value for the temperature parameter.
+        """
+        super(IntraModalConsistencyLoss, self).__init__()
+        # Initialize the temperature parameter as trainable
+        self.temperature = nn.Parameter(torch.tensor(initial_temperature))
 
-    Returns:
-        torch.Tensor: The calculated intra-modal consistency loss.
-    """
-    N, T, d = identity_features.shape
+    def forward(self, identity_features):
+        """
+        Calculate the intra-modal consistency loss.
+
+        Parameters:
+            identity_features (torch.Tensor): Tensor of shape (N, T, d), where
+                - N is the number of identities,
+                - T is the number of frames per identity,
+                - d is the dimensionality of identity feature vectors.
+
+        Returns:
+            torch.Tensor: The calculated loss value.
+        """
+        N, T, d = identity_features.shape
 
         # Compute pairwise similarities across time windows and identities
         # As described in the Paper: We then measure the similarity
         # between all pairs of identity vectors ⟨µi(t), µj (q)⟩, where i, j are identity indices
         # and t, q time-window indices, resulting in a T × T × N × N similarity tensor.
 
+        identity_features = F.normalize(identity_features, p=2, dim=-1)
         similarities = (
             torch.einsum("itd,jqd->tqij", identity_features, identity_features)
             / self.temperature
         )
 
-    # Take exponentials as per the loss formula
-    exp_similarities = torch.exp(similarities)
+        # Take exponentials
+        exp_similarities = torch.exp(similarities)
 
-    # Initialize the loss
-    loss = 0
+        # Compute numerator: similarities between same identity frames
+        numerator = torch.diagonal(exp_similarities, dim1=2, dim2=3)  # Shape: (T, T, N)
 
-    # Loop over each identity and time window to compute the loss
-    for t in range(T):
-        q_frame_loss = 0
-        for q in range(T):
-            identity_loss = 0
-            for i in range(N):
-                # Numerator: Similarities between the same identity's frames
-                # representing exp(⟨µi(t), µi (q)⟩)/ τ
-                numerator = exp_similarities[t, q, i, i]
+        # Compute denominator: sum over all identities
+        denominator = exp_similarities.sum(dim=3)  # Shape: (T, T, N)
 
-                # denominator reprensents sum(exp(⟨µi(t), µj (q)⟩)/τ)) for j in range(N)
-                denominator = 0
-                for j in range(N):
-                    denominator = +exp_similarities[t, q, i, j]
+        loss = torch.log(numerator / denominator)  # Shape: (T, T, N)
 
-                # Add the log term to the loss
-                identity_loss += torch.log(numerator / denominator)
-            q_frame_loss += identity_loss
-        loss += q_frame_loss
-    # Normalize the loss over all identities and time windows
-    loss /= N * T * T
-    return -loss
+        loss = loss.sum() / (N * T * T)
+        return -loss
+
 
 # TODO not tested yet
 def cross_modal_consistency_loss(visual_features, audio_features, temperature):
@@ -76,7 +73,7 @@ def cross_modal_consistency_loss(visual_features, audio_features, temperature):
     audio_features = F.normalize(audio_features, p=2, dim=-1)
 
     # Compute similarity tensor
-    similarity_matrix = torch.einsum('ntd,nqd->ntq', visual_features, audio_features)
+    similarity_matrix = torch.einsum("ntd,nqd->ntq", visual_features, audio_features)
 
     # Extract similarity scores between audio and video
     diagonal_scores = torch.diagonal(similarity_matrix, dim1=1, dim2=2).permute(1, 0)
@@ -84,12 +81,12 @@ def cross_modal_consistency_loss(visual_features, audio_features, temperature):
 
     # compute loss terms for similarity in both directions
     t1 = -torch.log(
-        torch.exp(diagonal_scores / temperature) /
-        torch.sum(torch.exp(similarity_matrix_exp), dim=-1)
+        torch.exp(diagonal_scores / temperature)
+        / torch.sum(torch.exp(similarity_matrix_exp), dim=-1)
     )
     t2 = -torch.log(
-        torch.exp(diagonal_scores / temperature) /
-        torch.sum(torch.exp(similarity_matrix_exp.transpose(1, 2)), dim=-1)
+        torch.exp(diagonal_scores / temperature)
+        / torch.sum(torch.exp(similarity_matrix_exp.transpose(1, 2)), dim=-1)
     )
 
     # added terms and average
